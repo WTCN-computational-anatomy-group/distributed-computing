@@ -103,7 +103,7 @@ clean     - Clean tmp data when finished [true]
 
 ### Run
 
-The main function is `distribute`. Its syntax, is quite straightforward: it takes the option structure, a function name or handle, and the list of arguments to pass to the function. Arguments that should be sliced (i.e., iterated over), should be preceded by 'iter'. Arguments that should be sliced *and* are both inputs and outputs (in particular, structure arrays) should be preceded by 'inplace'.
+The main function is `distribute`. Its syntax, is quite straightforward: it takes the option structure, a function name or handle, and the list of arguments to pass to the function. Arguments that should be sliced (i.e., iterated over), should be preceded by `'iter'`. Arguments that should be sliced *and* are both inputs and outputs (in particular, structure arrays) should be preceded by `'inplace'`.
 
 ```
 FORMAT [out1, ...] = distribute(opt, func, ('iter'/'inplace'), arg1, ...)
