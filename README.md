@@ -155,7 +155,8 @@ a = distribute(dist, @setfield, 'inplace', a, 'f', 3);
 
 ## Future developments
 
-We intend to:
-- Allow job batching, where a single job processes several "subjects".
-- Allow automatic detection of RAM usage.
-- Allow optimising cluster use by choosing between local and distributed processing based on the cluster load.
+We intend to allow:
+- job batching, where a single job processes several "subjects".
+- automatic detection of RAM usage.
+- optimising cluster use by choosing between local and distributed processing based on the cluster load.
+- distributing scripts/binaries on top of Matlab functions. This can be helpful for working with compiled Matlab scripts.
