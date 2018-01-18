@@ -78,7 +78,7 @@ job.mem     - Max memory usage by a single job ['2G']
 optim.optim - Try to optimise distribution between cluster and local [true]
 optim.busy  - Business threshold for which local is preferred over
               cluster [0.9]
-              ```
+```
 
 #### MATLAB
 ```
