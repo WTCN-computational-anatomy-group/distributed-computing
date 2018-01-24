@@ -537,6 +537,10 @@ end
 % -------------------------------------------------------------------------
 
 function path = auto_detect_spm(opt)
+    if isempty(opt.server.ip) || isempty(opt.ssh.bin)
+        path = '';
+        return
+    end
     warning('auto_detect: spm not implemented yet')
     path = '';
 end
