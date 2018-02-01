@@ -20,8 +20,17 @@ end
 function obj = translate(opt, obj)
     
     if ischar(obj) && ~strcmpi(opt.restrict, 'file_array')
-        for j=1:size(opt.translate, 1)
-            obj = strrep(obj, opt.translate(j,1), opt.translate(j,2));
+        [pth,nam,ext] = fileparts(obj);
+        if strcmp(ext,'.mat')
+           obj1 = load(obj);
+           obj1 = translate(opt, obj1);
+           save(obj,'-struct','obj1');
+           pth = translate(opt, fullfile(pth,nam));
+           obj = [pth ext];
+        else
+            for j=1:size(opt.translate, 1)
+                obj = strrep(obj, opt.translate(j,1), opt.translate(j,2));
+            end
         end
         return
     end
@@ -37,7 +46,9 @@ function obj = translate(opt, obj)
         fields = fieldnames(obj);
         for j=1:numel(fields)
             field = fields{j};
-            obj.(field) = translate(opt, obj.(field));
+            for n=1:numel(obj)
+                obj(n).(field) = translate(opt, obj(n).(field));
+            end
         end
         return
     end

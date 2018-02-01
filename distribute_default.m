@@ -228,6 +228,10 @@ function opt = distribute_default(opt)
         opt.matlab.priv.add = opt.matlab.priv.add(1:end-1);
     end
     
+    if opt.clean && exist(opt.client.folder,'dir')
+        rmdir(opt.client.folder,'s');
+    end
+    mkdir(opt.client.folder);           
 end
 
 % =========================================================================
@@ -543,4 +547,43 @@ function path = auto_detect_spm(opt)
     end
     warning('auto_detect: spm not implemented yet')
     path = '';
+end
+
+% -------------------------------------------------------------------------
+%   newline
+% -------------------------------------------------------------------------
+
+function out = newline
+    if exist('newline','builtin')
+        out = newline;
+        return
+    end
+
+    out = char(10);    
+end
+
+% -------------------------------------------------------------------------
+%   split
+% -------------------------------------------------------------------------
+
+function out = split(varargin)
+    if exist('split','builtin')
+        out = split(varargin{:});
+        return
+    end
+
+    out = strsplit(varargin{:});    
+end
+
+% -------------------------------------------------------------------------
+%   contains
+% -------------------------------------------------------------------------
+
+function out = contains(varargin)
+    if exist('contains','builtin')
+        out = contains(varargin{:});
+        return
+    end
+
+    out = strfind(varargin{:});    
 end
