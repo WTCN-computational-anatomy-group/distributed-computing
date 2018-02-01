@@ -289,7 +289,7 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
         end
         argin = distribute_translate(opt, argin);
         save(fullfile(opt.client.folder, matin{n}), 'argin', '-mat'); 
-        clear argsin
+        clear argin
         
     end
     save(fullfile(opt.client.folder, fnames), 'matin', 'matout', '-mat');
@@ -435,7 +435,6 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
     % ----------
     if opt.clean
         names = [{mainsh mainout mainerr ...
-                 dummysh dummyout dummyerr ...
                  fnames} matin matout];
         for i=1:numel(names)
             if exist(fullfile(opt.client.folder, names{i}), 'file')

@@ -32,7 +32,7 @@ function obj = translate(opt, obj)
         if strcmp(ext,'.mat')
             if opt.server_to_client
                 pth = translate(opt, fullfile(pth,nam));
-                obj = [pth ext];
+                obj = [char(pth) ext];
             end
             obj1 = load(obj);
             obj1 = translate(opt, obj1);
@@ -40,7 +40,7 @@ function obj = translate(opt, obj)
             clear obj1
             if ~opt.server_to_client
                 pth = translate(opt, fullfile(pth,nam));
-                obj = [pth ext];
+                obj = [char(pth) ext];
             end
         else
             for j=1:size(opt.translate, 1)
