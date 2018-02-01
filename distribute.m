@@ -390,9 +390,7 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
     % -----------
     pause(1)
     % Reverse translation
-    if ~isempty(opt.translate)
-        opt.translate = {opt.translate{:,2} opt.translate{:,1}};
-    end
+    opt.server_to_client = true;
     % initialise output structure
     [varargout{1:nargout}] = deal({});
     j = 1;
@@ -431,6 +429,7 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
         end
         clear argout
     end
+    opt.server_to_client = false;
     
     % Clean disk
     % ----------

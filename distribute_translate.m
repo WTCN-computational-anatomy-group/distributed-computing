@@ -11,6 +11,14 @@ function varargout = distribute_translate(opt, varargin)
 %                   objects. If empty, do not restrict.
 % arg   - Argument that needs translation (string, file_array, struct, ...)
 
+    if isfield(opt, 'server_to_client') && opt.server_to_client
+        if ~isempty(opt.translate)
+            opt.translate = {opt.translate{:,2} opt.translate{:,1}};
+        end
+    else
+        opt.server_to_client = false;
+    end
+
     for i=1:min(numel(varargin), nargout)
         varargout{i} = translate(opt, varargin{i});
     end
@@ -22,11 +30,18 @@ function obj = translate(opt, obj)
     if ischar(obj) && ~strcmpi(opt.restrict, 'file_array')
         [pth,nam,ext] = fileparts(obj);
         if strcmp(ext,'.mat')
-           obj1 = load(obj);
-           obj1 = translate(opt, obj1);
-           save(obj,'-struct','obj1');
-           pth = translate(opt, fullfile(pth,nam));
-           obj = [pth ext];
+            if opt.server_to_client
+                pth = translate(opt, fullfile(pth,nam));
+                obj = [pth ext];
+            end
+            obj1 = load(obj);
+            obj1 = translate(opt, obj1);
+            save(obj,'-struct','obj1');
+            clear obj1
+            if ~opt.server_to_client
+                pth = translate(opt, fullfile(pth,nam));
+                obj = [pth ext];
+            end
         else
             for j=1:size(opt.translate, 1)
                 obj = strrep(obj, opt.translate(j,1), opt.translate(j,2));
