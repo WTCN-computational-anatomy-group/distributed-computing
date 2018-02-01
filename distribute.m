@@ -259,16 +259,12 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
     % ---------
     uid      = char(java.util.UUID.randomUUID()); % General UID
     mainname = ['main_' uid];
-    dummyname= ['dummy_' uid];
     fnames   = ['fnames_' uid '.mat'];     % job nb <-> data filename
-    matin    = cell(1,N);               % input data filenames
-    matout   = cell(1,N);               % output data filenames
+    matin    = cell(1,N);                  % input data filenames
+    matout   = cell(1,N);                  % output data filenames
     mainsh   = ['main_' uid '.sh'];        % main bash script
     mainout  = ['main_cout_' uid '.log'];  % main output file
     mainerr  = ['main_cerr_' uid '.log'];  % main error file
-    dummysh  = ['dummy_' uid '.sh'];       % dummy bash script
-    dummyout = ['dummy_cout_' uid '.log']; % dummy output file
-    dummyerr = ['dummy_cerr' uid '.log']; % dummy error file
     
     % Write data
     % ----------
