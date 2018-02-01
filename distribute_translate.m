@@ -44,7 +44,7 @@ function obj = translate(opt, obj)
             end
         else
             for j=1:size(opt.translate, 1)
-                obj = strrep(obj, opt.translate(j,1), opt.translate(j,2));
+                obj = strrep(obj, opt.translate{j,1}, opt.translate{j,2});
             end
         end
         return
