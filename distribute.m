@@ -121,14 +121,22 @@ function varargout = distribute(opt, func, varargin)
     % ----------
     if opt.server.setup && check_server_load(opt)
         [varargout{1:nargout}] = distribute_server(opt, funcstr, args, flags, access, N);
+        
+        opt = varargout{1};
+        
+        if opt.job.est_mem
+            % Estimate new memory usage
+            % ----------
+            opt = estimate_mem(opt);            
+        end
     elseif double(opt.client.workers) > 0
-        [varargout{1:nargout}] = distribute_local(opt, func, args, flags, access, N);
+        [varargout{2:nargout}] = distribute_local(opt, func, args, flags, access, N);
     else
-        [varargout{1:nargout}] = distribute_not(opt, func, args, flags, access, N);
+        [varargout{2:nargout}] = distribute_not(opt, func, args, flags, access, N);
     end
 
+    varargout{1} = opt;    
 end
-
 
 function ok = check_server_load(~)
     ok = true;
@@ -314,9 +322,9 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
     batch_script = [batch_script ...
             'load(fullfile(''' opt.server.folder ''',''' fnames '''),''matin'',''matout'');' ...
             'load(fullfile(''' opt.server.folder ''',matin{$SGE_TASK_ID}),''argin'');' ...
-            'argout=cell(1,' num2str(nargout) ');' ...
+            'argout=cell(1,' num2str(nargout - 1) ');' ...
             'func=str2func(''' func ''');' ...
-            '[argout{1:' num2str(nargout) '}]=func(argin{:});' ...
+            '[argout{1:' num2str(nargout - 1) '}]=func(argin{:});' ...
             'save(fullfile(''' opt.server.folder ''',matout{$SGE_TASK_ID}),''argout'',''-mat'');' ...
             'quit;' ...
         '"\n' ...
@@ -386,14 +394,19 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
         end
     end
     
+    % Store job ID
+    %-----------
+    opt.job.id = jobid;
+    varargout{1} = opt;
+    
     % Read output
     % -----------
     pause(1)
     % Reverse translation
     opt.server_to_client = true;
     % initialise output structure
-    [varargout{1:nargout}] = deal({});
-    j = 1;
+    [varargout{2:nargout}] = deal({});
+    j = 2;
     for i=1:numel(args)
         if strcmpi(flags{i}, 'inplace')
             varargout{j} = args{i};
@@ -411,13 +424,13 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
         load(fullfile(opt.client.folder, matout{n}), 'argout');
         argout = distribute_translate(opt, argout);
         % fill inplace
-        j = 1;
+        j = 2;
         for i=1:numel(args)
             if strcmpi(flags{i}, 'inplace')
                 if strcmpi(access{i}, '{}')
-                    varargout{j}{n} = argout{j};
+                    varargout{j}{n} = argout{j - 1};
                 elseif strcmpi(access{i}, '()')
-                    varargout{j}(n) = argout{j};
+                    varargout{j}(n) = argout{j - 1};
                 end
                 j = j + 1;
             end
@@ -425,7 +438,7 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
         % fill remaining
         j1 = j;
         for j=j1:nargout
-            varargout{j}{n} = argout{j};
+            varargout{j}{n} = argout{j - 1};
         end
         clear argout
     end
@@ -443,4 +456,51 @@ function varargout = distribute_server(opt, func, args, flags, access, N)
         end
     end
     
+end
+
+% -------------------------------------------------------------------------
+%   Estimate memory usage
+% -------------------------------------------------------------------------
+
+function opt = estimate_mem(opt)
+    jobid = opt.job.id;
+    omem  = opt.job.mem;
+
+    cmd = '';
+    for i=1:numel(opt.client.source)
+        cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
+    end
+    cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    for i=1:numel(opt.server.source)
+        cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
+    end
+    cmd = [cmd opt.sched.acct ' '];
+
+    cmd = [cmd ' -j ' num2str(jobid) ' | grep maxvmem"'];
+
+    [status,result] = system(cmd);   
+
+    if status==0
+        jobs = strsplit(result,'G');
+        S    = numel(jobs) - 1;    
+        a    = zeros(1,S);
+        for s=1:S
+            job  = jobs{s};                                     % string
+            val  = str2double(regexp(job,'\d','match','once')); % find value of first digit in string
+            ix   = strfind(job,num2str(val));                   % index of first digit in string
+
+            a(s) = str2double(job(ix(1):end));                  % extract RAM
+        end
+
+        sd  = 0.1;
+        mem = round(max(a) + sd*max(a),1);
+        
+        opt.mem = [num2str(mem) 'G'];   
+    else
+        opt.mem = omem; 
+    end
+
+    if opt.verbose
+        fprintf('New memory usage is %s.\n',opt.mem);
+    end
 end
