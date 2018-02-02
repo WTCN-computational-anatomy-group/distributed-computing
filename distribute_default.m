@@ -431,11 +431,10 @@ function varargout = auto_detect_sched(varargin)
     if nargin == 1
         % find sub/stat/acct
         opt = varargin{1};
-        sub = '';
-        stat = '';
         if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-            varargout{1} = sub;
-            varargout{2} = stat;
+            varargout{1} = '';
+            varargout{2} = '';
+            varargout{3} = '';
             return
         end
         sub  = sshwhich(opt, 'qsub');
