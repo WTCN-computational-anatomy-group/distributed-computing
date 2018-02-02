@@ -74,26 +74,25 @@ ssh.bin     - Path to the ssh binary [try to detect]
 sched.sub   - Path to the submit binary [try to detect]
 sched.stat  - Path to the stat binary [try to detect]
 sched.type  - Type of scheduler 'sge'/'pbs'/[try to detect]
-job.mem     - Max memory usage by a single job ['2G']
+job.batch   - Submit jobs as a batch (force same mem for all) [true]
+job.mem     - (Initial) Max memory usage by a single job ['2G']
+job.est_mem - Estimate max memory usage from previous runs [true]
 optim.optim - Try to optimise distribution between cluster and local [true]
-optim.busy  - Business threshold for which local is preferred over
-              cluster [0.9]
+optim.busy  - Business threshold for which local is preferred over cluster [0.9]
 ```
 
 #### MATLAB
 ```
 matlab.bin    - Path to matlab binary [try to detect]
 matlab.add    - Paths to add to Matlab path [{}]
-matlab.opt    - Commandline options to pass to matlab
-                [{'-nojvm' '-nodesktop' '-nosplash' '-singleCompThread'}]
+matlab.opt    - Commandline options to pass to matlab ['-nojvm -nodesktop -nosplash -singleCompThread']
 spm.path      - Path to SPM [try to detect]
 spm.toolboxes - List of SPM toolboxes to add to Matlab path [{}]
 ```
 
 #### DATA
 ```
-translate - Cell array of size 2xN with translation between client and
-            server paths [{client.folder server.folder}].
+translate - Cell array of size 2xN with translation between client and server paths [{client.folder server.folder}].
             Example:
                  {'/home/me/'     '/mnt/users/me/' ;
                   '/shared/data/' '/mnt/shared/data'}
