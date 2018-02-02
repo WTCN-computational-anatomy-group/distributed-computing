@@ -34,18 +34,18 @@ First an option structure must be generated with the `distribute_default` functi
 
 Here is an example of a typical configuration:
 ```
-dist = struct;
+opt = struct;
 
-dist.server.ip      = 'cluster.university.ac.uk';
-dist.server.login   = 'me';
-dist.server.folder  = '/home/me/distribute';
-dist.client.folder  = '/Users/me/distribute';
+opt.server.ip      = 'cluster.university.ac.uk';
+opt.server.login   = 'me';
+opt.server.folder  = '/home/me/distribute';
+opt.client.folder  = '/Users/me/distribute';
 
-dist.matlab.bin     = '/share/apps/matlab';
+opt.matlab.bin     = '/share/apps/matlab';
 
-dist.translate      = {'/Users/me/mydata' '/home/me/data'};
+opt.translate      = {'/Users/me/mydata' '/home/me/data'};
 
-dist = distribute_default(dist);
+opt = distribute_default(opt);
 ```
 
 ### Options
@@ -74,26 +74,25 @@ ssh.bin     - Path to the ssh binary [try to detect]
 sched.sub   - Path to the submit binary [try to detect]
 sched.stat  - Path to the stat binary [try to detect]
 sched.type  - Type of scheduler 'sge'/'pbs'/[try to detect]
-job.mem     - Max memory usage by a single job ['2G']
+job.batch   - Submit jobs as a batch (force same mem for all) [true]
+job.mem     - (Initial) Max memory usage by a single job ['2G']
+job.est_mem - Estimate max memory usage from previous runs [true]
 optim.optim - Try to optimise distribution between cluster and local [true]
-optim.busy  - Business threshold for which local is preferred over
-              cluster [0.9]
+optim.busy  - Business threshold for which local is preferred over cluster [0.9]
 ```
 
 #### MATLAB
 ```
 matlab.bin    - Path to matlab binary [try to detect]
 matlab.add    - Paths to add to Matlab path [{}]
-matlab.opt    - Commandline options to pass to matlab
-                [{'-nojvm' '-nodesktop' '-nosplash' '-singleCompThread'}]
+matlab.opt    - Commandline options to pass to matlab ['-nojvm -nodesktop -nosplash -singleCompThread']
 spm.path      - Path to SPM [try to detect]
 spm.toolboxes - List of SPM toolboxes to add to Matlab path [{}]
 ```
 
 #### DATA
 ```
-translate - Cell array of size 2xN with translation between client and
-            server paths [{client.folder server.folder}].
+translate - Cell array of size 2xN with translation between client and server paths [{client.folder server.folder}].
             Example:
                  {'/home/me/'     '/mnt/users/me/' ;
                   '/shared/data/' '/mnt/shared/data'}
@@ -103,10 +102,10 @@ clean     - Clean tmp data when finished [true]
 
 ### Run
 
-The main function is `distribute`. Its syntax, is quite straightforward: it takes the option structure, a function name or handle, and the list of arguments to pass to the function. Arguments that should be sliced (i.e., iterated over), should be preceded by `'iter'`. Arguments that should be sliced *and* are both inputs and outputs (in particular, structure arrays) should be preceded by `'inplace'`.
+The main function is `distribute`. Its syntax, is quite straightforward: it takes the option structure, a function name or handle, and the list of arguments to pass to the function. Arguments that should be sliced (i.e., iterated over), should be preceded by `'iter'`. Arguments that should be sliced *and* are both inputs and outputs (in particular, structure arrays) should be preceded by `'inplace'`. The option structure is returned because some functionalities (RAM usage estimation) need this structure to be updated.
 
 ```
-FORMAT [out1, ...] = distribute(opt, func, ('iter'/'inplace'), arg1, ...)
+FORMAT [opt, out1, ...] = distribute(opt, func, ('iter'/'inplace'), arg1, ...)
 
 opt  - Option structure. See 'help distribute_default'.
 func - Matlab function to apply (string or function handle)
@@ -139,7 +138,7 @@ end
 true_c = cellfun(@plus, a, b, 'UniformOutput', false);
 
 % Distributed processing
-dist_c = distribute(dist, 'plus', 'iter', a, 'iter', b);
+[opt, dist_c] = distribute(opt, 'plus', 'iter', a, 'iter', b);
 ```
 
 Let us now apply a distributed process to a structure array, which is both input and output
@@ -150,13 +149,12 @@ f = cell(1,N);
 a = struct('f', f);
 
 % Set the value 3 in all fields 'f'
-a = distribute(dist, @setfield, 'inplace', a, 'f', 3);
+[opt, a] = distribute(dist, @setfield, 'inplace', a, 'f', 3);
 ```
 
 ## Future developments
 
 We intend to allow:
 - job batching, where a single job processes several "subjects".
-- automatic detection of RAM usage.
 - optimising cluster use by choosing between local and distributed processing based on the cluster load.
 - distributing scripts/binaries on top of Matlab functions. This can be helpful for working with compiled Matlab scripts.
