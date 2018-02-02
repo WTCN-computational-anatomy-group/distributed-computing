@@ -29,8 +29,11 @@ function opt = distribute_default(opt)
 % ssh.bin     - Path to the ssh binary [try to detect]
 % sched.sub   - Path to the submit binary [try to detect]
 % sched.stat  - Path to the stat binary [try to detect]
+% sched.acct  - Path to the acct binary [try to detect]
 % sched.type  - Type of scheduler 'sge'/'pbs'/[try to detect]
-% job.mem     - Max memory usage by a single job ['2G']
+% job.batch   - Submit jobs as a batch (force same mem for all) [true]
+% job.mem     - (Initial) Max memory usage by a single job ['2G']
+% job.est_mem - Estimate max memory usage from previous runs [true]
 % optim.optim - Try to optimise distribution between cluster and local [true]
 % optim.busy  - Business threshold for which local is preferred over
 %               cluster [0.9]
@@ -133,12 +136,10 @@ function opt = distribute_default(opt)
     if ~isfield(opt, 'sched')
         opt.sched = struct;
     end
-    if ~isfield(opt.sched, 'sub') && ~isfield(opt.sched, 'stat')
-        [opt.sched.sub, opt.sched.stat] = auto_detect('sched', opt);
-    elseif isfield(opt.sched, 'sub')
-        opt.sched.stat = auto_detect('sched', 'sub', opt.sched.sub, opt);
-    elseif isfield(opt.sched, 'stat')
-        opt.sched.sub = auto_detect('sched', 'stat', opt.sched.stat, opt);
+    if ~isfield(opt.sched, 'sub') ...
+            || ~isfield(opt.sched, 'stat') ...
+            || ~isfield(opt.schet, 'acct')
+        [opt.sched.sub, opt.sched.stat, opt.sched.acct] = auto_detect('sched', opt);
     end
     if ~isfield(opt.sched, 'type')
         opt.sched.type = auto_detect('sched', 'type', opt.sched.sub, opt);
@@ -148,6 +149,12 @@ function opt = distribute_default(opt)
     end
     if ~isfield(opt.job, 'mem')
         opt.job.mem = '2G';
+    end
+    if ~isfield(opt.job, 'batch')
+        opt.job.batch = true;
+    end
+    if ~isfield(opt.job, 'est_mem')
+        opt.job.est_mem = true;
     end
     if ~isfield(opt, 'optim')
         opt.optim = struct;
@@ -230,8 +237,10 @@ function opt = distribute_default(opt)
     
     if opt.clean && exist(opt.client.folder,'dir')
         rmdir(opt.client.folder,'s');
-    end
-    mkdir(opt.client.folder);           
+        mkdir(opt.client.folder); 
+    elseif ~exist(opt.client.folder,'dir')
+        mkdir(opt.client.folder);   
+    end        
 end
 
 % =========================================================================
@@ -417,7 +426,7 @@ end
 function varargout = auto_detect_sched(varargin)
 
     if nargin == 1
-        % find sub and stat
+        % find sub/stat/acct
         opt = varargin{1};
         sub = '';
         stat = '';
@@ -428,7 +437,8 @@ function varargout = auto_detect_sched(varargin)
         end
         sub  = sshwhich(opt, 'qsub');
         stat = sshwhich(opt, 'qstat');
-        if isempty(sub) || isempty(stat)
+        acct = sshwhich(opt, 'qacct');
+        if isempty(sub) || isempty(stat) || isempty(acct)
             path = sshpath(opt);
             for i=1:numel(path)
                 if isempty(sub) && sshexist(opt, [path{i} '/qsub'])
@@ -437,80 +447,40 @@ function varargout = auto_detect_sched(varargin)
                 if isempty(stat) && sshexist(opt, [path{i} '/qstat'])
                     stat = [path{i} '/qstat'];
                 end
-                if ~isempty(sub) && ~isempty(stat)
+                if isempty(acct) && sshexist(opt, [path{i} '/qacct'])
+                    acct = [path{i} '/qacct'];
+                end
+                if ~isempty(sub) && ~isempty(stat) && ~isempty(acct)
                     break
                 end
             end
         end
-        if isempty(sub) || isempty(stat)
-            warning('Could not detect qsub or qstat')
+        if isempty(sub) || isempty(stat) || isempty(acct)
+            warning('Could not detect qsub/qstat/qacct')
         end
         varargout{1} = sub;
         varargout{2} = stat;
+        varargout{3} = acct;
     elseif nargin == 3
-        if strcmpi(varargin{1}, 'sub')
-            % find stat
-            sub = varargout{2};
-            opt = varargout{3};
-            stat = '';
-            if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-                varargout{1} = stat;
-                return
-            end
-            stat = sshwhich(opt, 'qstat');
-            if isempty(stat)
-                path = fileparts(sub);
-                path = {path; sshpath(opt)};
-                for i=1:numel(path)
-                    if sshexist(opt, [path{i} '/qstat'])
-                        stat = [path{i} '/qstat'];
-                        break
-                    end
-                end
-            end
-            varargout{1} = stat;
-        elseif strcmpi(varargin{1}, 'stat')
-            % find sub
-            stat = varargin{2};
-            opt  = varargin{3};
-            sub = '';
-            if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-                varargout{1} = sub;
-                return
-            end
-            sub = sshwhich(opt, 'qsub');
-            if isempty(sub)
-                path = fileparts(sub);
-                path = {path; sshpath(opt)};
-                for i=1:numel(path)
-                    if sshexist(opt, [path{i} '/qsub'])
-                        sub = [path{i} '/qsub'];
-                        break
-                    end
-                end
-            end
-            varargout{1} = sub;
-        else 
-            % find type
-            sub = varargin{2};
-            opt = varargin{3};
-            type = '';
-            if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-                varargout{1} = type;
-                return
-            end
-            if contains(sub, 'gridengine')
-                type = 'sge';
-            elseif sshcommandst(opt, 'man qsub | grep -i ''pbs''')
-                type = 'pbs';
-            elseif sshcommandst(opt, 'man qsub | grep -i ''sge''')
-                type = 'sge';
-            else
-                warning(['Could not detect sheduler type for sure. ' ...
-                         'Trying SGE.']);
-            end
+        % find type
+        sub = varargin{2};
+        opt = varargin{3};
+        type = '';
+        if isempty(opt.server.ip) || isempty(opt.ssh.bin)
             varargout{1} = type;
+            return
         end
+        if contains(sub, 'gridengine')
+            type = 'sge';
+        elseif sshcommandst(opt, 'man qsub | grep -i ''pbs''')
+            type = 'pbs';
+        elseif sshcommandst(opt, 'man qsub | grep -i ''sge''')
+            type = 'sge';
+        else
+            warning(['Could not detect sheduler type for sure. ' ...
+                     'Trying SGE.']);
+        end
+        varargout{1} = type;
     end
         
 end
@@ -545,6 +515,5 @@ function path = auto_detect_spm(opt)
         path = '';
         return
     end
-    warning('auto_detect: spm not implemented yet')
     path = '';
 end
