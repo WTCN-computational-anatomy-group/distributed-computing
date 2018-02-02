@@ -148,7 +148,10 @@ function opt = distribute_default(opt)
         opt.job = struct;
     end
     if ~isfield(opt.job, 'mem')
-        opt.job.mem = '2G';
+        opt.job.mem = {'2G'};
+    end
+    if ~iscell(opt.job.mem)
+        opt.job.mem = {opt.job.mem};
     end
     if ~isfield(opt.job, 'batch')
         opt.job.batch = true;
