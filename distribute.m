@@ -673,7 +673,7 @@ end
 % -------------------------------------------------------------------------
 
 function opt = estimate_mem(opt,N)               
-    sd = 0.15;
+    sd = opt.job.sd;
     
     if opt.job.batch                
         jobid = opt.job.id{1};

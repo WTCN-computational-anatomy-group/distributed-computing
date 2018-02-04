@@ -34,6 +34,7 @@ function opt = distribute_default(opt)
 % job.batch   - Submit jobs as a batch (force same mem for all) [true]
 % job.mem     - (Initial) Max memory usage by a single job ['2G']
 % job.est_mem - Estimate max memory usage from previous runs [true]
+% job.sd      - Amount of extra memory to add to estimated max memory [0.2]
 % optim.optim - Try to optimise distribution between cluster and local [true]
 % optim.busy  - Business threshold for which local is preferred over
 %               cluster [0.9]
@@ -159,6 +160,9 @@ function opt = distribute_default(opt)
     if ~isfield(opt.job, 'est_mem')
         opt.job.est_mem = true;
     end
+    if ~isfield(opt.job, 'sd')
+        opt.job.sd = 0.2;
+    end
     if ~isfield(opt, 'optim')
         opt.optim = struct;
     end
@@ -238,11 +242,12 @@ function opt = distribute_default(opt)
         opt.matlab.priv.add = opt.matlab.priv.add(1:end-1);
     end
     
-    if opt.clean && exist(opt.client.folder,'dir')
-        rmdir(opt.client.folder,'s');
-        mkdir(opt.client.folder); 
-    elseif ~exist(opt.client.folder,'dir')
-        mkdir(opt.client.folder);   
+    dir_cluster= fullfile(opt.client.folder,'cluster');
+    if opt.clean && exist(dir_cluster,'dir')
+        rmdir(dir_cluster,'s');
+        mkdir(dir_cluster); 
+    elseif ~exist(dir_cluster,'dir')
+        mkdir(dir_cluster);   
     end        
 end
 
