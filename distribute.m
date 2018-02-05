@@ -391,10 +391,8 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     while 1
         pause(1); % Do not refresh too often
         [~, result] = system(cmd);
-        if isempty(result)
-            if opt.verbose
-                fprintf_job(opt,N,toc(start_track));                
-            end
+        if isempty(result)            
+            fprintf_job(opt,N,toc(start_track));                            
             break
         end
     end
@@ -598,10 +596,9 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     while 1
         pause(1); % Do not refresh too often
         [~, result] = system(cmd);
-        if isempty(result)
-            if opt.verbose
-                fprintf_job(opt,N,toc(start_track));           
-            end
+        if isempty(result)            
+            fprintf_job(opt,N,toc(start_track));           
+            
             break
         end
     end

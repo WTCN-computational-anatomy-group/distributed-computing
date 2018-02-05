@@ -242,12 +242,14 @@ function opt = distribute_default(opt)
         opt.matlab.priv.add = opt.matlab.priv.add(1:end-1);
     end
     
-    dir_cluster= fullfile(opt.client.folder,'cluster');
-    if opt.clean && exist(dir_cluster,'dir')
-        rmdir(dir_cluster,'s');
-        mkdir(dir_cluster); 
-    elseif ~exist(dir_cluster,'dir')
-        mkdir(dir_cluster);   
+    opt.client.folder = fullfile(opt.client.folder,'cluster');
+    opt.server.folder = fullfile(opt.server.folder,'cluster');
+        
+    if opt.clean && exist(opt.client.folder,'dir')
+        rmdir(opt.client.folder,'s');
+        mkdir(opt.client.folder); 
+    elseif ~exist(opt.client.folder,'dir')
+        mkdir(opt.client.folder);   
     end        
 end
 
