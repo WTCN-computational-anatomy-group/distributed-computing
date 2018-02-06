@@ -25,18 +25,19 @@ function opt = distribute_default(opt)
 %
 % SUBMIT JOBS
 % -----------
-% ssh.type    - SSH software to use 'ssh'/'putty'/[try to detect]
-% ssh.bin     - Path to the ssh binary [try to detect]
-% sched.sub   - Path to the submit binary [try to detect]
-% sched.stat  - Path to the stat binary [try to detect]
-% sched.acct  - Path to the acct binary [try to detect]
-% sched.type  - Type of scheduler 'sge'/'pbs'/[try to detect]
-% job.batch   - Submit jobs as a batch (force same mem for all) [true]
-% job.mem     - (Initial) Max memory usage by a single job ['2G']
-% job.est_mem - Estimate max memory usage from previous runs [true]
-% job.sd      - Amount of extra memory to add to estimated max memory [0.2]
-% optim.optim - Try to optimise distribution between cluster and local [true]
-% optim.busy  - Business threshold for which local is preferred over
+% ssh.type      - SSH software to use 'ssh'/'putty'/[try to detect]
+% ssh.bin       - Path to the ssh binary [try to detect]
+% sched.sub     - Path to the submit binary [try to detect]
+% sched.stat    - Path to the stat binary [try to detect]
+% sched.acct    - Path to the acct binary [try to detect]
+% sched.type    - Type of scheduler 'sge'/'pbs'/[try to detect]
+% job.batch     - Submit jobs as a batch (force same mem for all) [true]
+% job.mem       - (Initial) Max memory usage by a single job ['2G']
+% job.est_mem   - Estimate max memory usage from previous runs [true]
+% job.sd        - Amount of extra memory to add to estimated max memory [0.2]
+% job.use_dummy - Uses a dummy job to decide when job have finished [false]
+% optim.optim   - Try to optimise distribution between cluster and local [true]
+% optim.busy    - Business threshold for which local is preferred over
 %               cluster [0.9]
 %
 % MATLAB
@@ -162,6 +163,9 @@ function opt = distribute_default(opt)
     end
     if ~isfield(opt.job, 'sd')
         opt.job.sd = 0.2;
+    end
+    if ~isfield(opt.job, 'use_dummy')
+        opt.job.use_dummy = false;
     end
     if ~isfield(opt, 'optim')
         opt.optim = struct;

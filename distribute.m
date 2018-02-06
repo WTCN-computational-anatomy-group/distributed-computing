@@ -278,6 +278,10 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     mainout  = ['main_cout_' uid '.log'];  % main output file
     mainerr  = ['main_cerr_' uid '.log'];  % main error file
     
+    if opt.job.use_dummy
+        [dummy_nam,dummy_sh,dummy_out,dummy_err] = create_dummy_job(opt);
+    end
+    
     % Write data
     % ----------
     for n=1:N
@@ -369,9 +373,33 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
         
     fprintf_job(opt,N);
         
+    if opt.job.use_dummy
+        % Submit dummy job
+        % ----------
+        cmd = '';
+        for i=1:numel(opt.client.source)
+            cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
+        end
+        cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+        for i=1:numel(opt.server.source)
+            cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
+        end
+        cmd = [cmd opt.sched.sub ' '];
+        
+        cmd = [cmd ' -l vf=0.1G -l h_vmem=0.1G -hold_jid ' mainname ' -cwd ' fullfile(opt.server.folder,dummy_sh) '"'];
+                
+        [status,result] = system(cmd);
+        if status
+            fprintf([result '\n'])
+            error('status~=0 for dummy job on Holly!') 
+        end
+        
+        s        = regexp(result, '^\D*(?<id>\d+)', 'names'); % ID of array job on server    
+        dummy_id = s.id;
+    end
+    
     % Track jobs
     % ----------
-    start_track = tic;
     cmd = '';
     for i=1:numel(opt.client.source)
         cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
@@ -380,17 +408,25 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     for i=1:numel(opt.server.source)
         cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
     end
-    cmd = [cmd opt.sched.stat ' '];
-    switch lower(opt.sched.type)
-        case 'sge'
-            cmd = [cmd ' | grep ' opt.job.id{1} ' '];
-        otherwise
-            error('distribute: scheduler %s not implemented yet', opt.sched.type);
+    cmd = [cmd opt.sched.stat ' '];       
+    if opt.job.use_dummy
+        cmd = [cmd ' | grep ' dummy_id ' '];
+    else
+        switch lower(opt.sched.type)
+            case 'sge'
+                cmd = [cmd ' | grep ' opt.job.id{1} ' '];
+            otherwise
+                error('distribute: scheduler %s not implemented yet', opt.sched.type);
+        end
     end
     cmd = [cmd '"'];
+    
+    start_track = tic;
     while 1
         pause(1); % Do not refresh too often
+        
         [~, result] = system(cmd);
+        
         if isempty(result)            
             fprintf_job(opt,N,toc(start_track));                            
             break
@@ -456,6 +492,16 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
                 delete(fullfile(opt.client.folder, names{i}));
             end
         end
+        
+        if opt.job.use_dummy
+            names = {dummy_sh,dummy_out,dummy_err};
+            
+            for i=1:numel(names)
+                if exist(fullfile(opt.client.folder, names{i}), 'file')
+                    delete(fullfile(opt.client.folder, names{i}));
+                end
+            end
+        end
     end
     
 end
@@ -470,6 +516,10 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
         [opt.job.mem{1:N}] = deal(opt.job.mem{1});
     end
 
+    if opt.job.use_dummy
+        [dummy_nam,dummy_sh,dummy_out,dummy_err] = create_dummy_job(opt);
+    end
+    
     mainname = cell(1,N);
     mainsh   = cell(1,N);
     mainout  = cell(1,N);
@@ -571,9 +621,38 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
         
     fprintf_job(opt,N);
     
+    if opt.job.use_dummy
+        % Submit dummy job
+        % ----------                
+        cmd = '';
+        for i=1:numel(opt.client.source)
+            cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
+        end
+        cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+        for i=1:numel(opt.server.source)
+            cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
+        end
+        cmd = [cmd opt.sched.sub ' '];
+        
+        nam = mainname{1};
+        for n=2:N
+            nam = [nam ',' mainname{n}];
+        end
+        
+        cmd = [cmd ' -l vf=0.1G -l h_vmem=0.1G -hold_jid ' nam ' -cwd ' fullfile(opt.server.folder,dummy_sh) '"'];
+                
+        [status,result] = system(cmd);
+        if status
+            fprintf([result '\n'])
+            error('status~=0 for dummy job on Holly!') 
+        end
+        
+        s        = regexp(result, '^\D*(?<id>\d+)', 'names'); % ID of array job on server    
+        dummy_id = s.id;
+    end
+    
     % Track jobs
-    % ----------
-    start_track = tic;
+    % ----------    
     cmd = '';
     for i=1:numel(opt.client.source)
         cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
@@ -583,19 +662,27 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
         cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
     end
     cmd = [cmd opt.sched.stat ' '];
-    switch lower(opt.sched.type)
-        case 'sge'
-            cmd = [cmd ' | grep '];
-            for n=1:N
-                cmd = [cmd '-e ' opt.job.id{n} ' '];
-            end
-        otherwise
-            error('distribute: scheduler %s not implemented yet', opt.sched.type);
+    if opt.job.use_dummy
+        cmd = [cmd ' | grep ' dummy_id ' '];
+    else
+        switch lower(opt.sched.type)
+            case 'sge'
+                cmd = [cmd ' | grep '];
+                for n=1:N
+                    cmd = [cmd '-e ' opt.job.id{n} ' '];
+                end
+            otherwise
+                error('distribute: scheduler %s not implemented yet', opt.sched.type);
+        end
     end
     cmd = [cmd '"'];
+    
+    start_track = tic;
     while 1
         pause(1); % Do not refresh too often
+        
         [~, result] = system(cmd);
+        
         if isempty(result)            
             fprintf_job(opt,N,toc(start_track));           
             
@@ -659,6 +746,16 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
         for i=1:numel(names)
             if exist(fullfile(opt.client.folder, names{i}), 'file')
                 delete(fullfile(opt.client.folder, names{i}));
+            end
+        end
+        
+        if opt.job.use_dummy
+            names = {dummy_sh,dummy_out,dummy_err};
+            
+            for i=1:numel(names)
+                if exist(fullfile(opt.client.folder, names{i}), 'file')
+                    delete(fullfile(opt.client.folder, names{i}));
+                end
             end
         end
     end
@@ -772,6 +869,37 @@ function opt = estimate_mem(opt,N)
             end
         end
     end
+end
+
+% -------------------------------------------------------------------------
+%  Create shell script to execute dummy job
+% -------------------------------------------------------------------------
+
+function [nam,sh,out,err] = create_dummy_job(opt)
+    uid = char(java.util.UUID.randomUUID()); 
+    nam = ['dummy_' uid];
+    sh  = ['dummy_' uid '.sh'];        
+    out = ['dummy_cout_' uid '.log'];  
+    err = ['dummy_cerr_' uid '.log']; 
+    
+    bash_script = sprintf(['#!/bin/sh\n'...
+                                 '\n'...
+                                 '#$ -S /bin/sh\n'...
+                                 '#$ -N ' nam '\n'...
+                                 '#$ -o ' fullfile(opt.server.folder,out) '\n'...
+                                 '#$ -e ' fullfile(opt.server.folder,err) '\n'...
+                                 '#$ -j n \n'...
+                                 '#$ -t 1-1 \n'...
+                                 '\n'...
+                                 'echo dummy\n']);
+                             
+    pth = fullfile(opt.client.folder,sh);
+    
+    fid = fopen(pth,'w');
+    fprintf(fid,bash_script);
+    fclose(fid);
+
+    fileattrib(pth,'+x','u')
 end
 
 % -------------------------------------------------------------------------
