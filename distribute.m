@@ -798,7 +798,7 @@ function opt = estimate_mem(opt,N)
                         a(s) = str2double(job{2});
                     end
 
-                    a   = round(max(a) + sd*max(a),1);
+                    a   = (1 + sd)*max(a);
                     mem = ceil(a * 10)/10; % Ceil to one decimal place
 
                     opt.job.mem{1} = [num2str(mem) 'G'];   

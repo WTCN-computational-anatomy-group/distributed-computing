@@ -34,7 +34,7 @@ function opt = distribute_default(opt)
 % job.batch     - Submit jobs as a batch (force same mem for all) [true]
 % job.mem       - (Initial) Max memory usage by a single job ['2G']
 % job.est_mem   - Estimate max memory usage from previous runs [true]
-% job.sd        - Amount of extra memory to add to estimated max memory [0.2]
+% job.sd        - Amount of extra memory to add to estimated max memory [0.1]
 % job.use_dummy - Uses a dummy job to decide when job have finished [false]
 % optim.optim   - Try to optimise distribution between cluster and local [true]
 % optim.busy    - Business threshold for which local is preferred over
@@ -162,7 +162,7 @@ function opt = distribute_default(opt)
         opt.job.est_mem = true;
     end
     if ~isfield(opt.job, 'sd')
-        opt.job.sd = 0.2;
+        opt.job.sd = 0.1;
     end
     if ~isfield(opt.job, 'use_dummy')
         opt.job.use_dummy = false;
