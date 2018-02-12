@@ -783,37 +783,26 @@ function opt = estimate_mem(opt,N)
         end
         cmd = [cmd opt.sched.acct ' '];
         cmd = [cmd ' -j ' num2str(jobid) ' | grep maxvmem"'];
+          
+        [status,result] = system(cmd);   
 
-        while true            
-            [status,result] = system(cmd);   
+        if status==0
+            jobs = strsplit(result,'G');
+            S    = numel(jobs) - 1; 
 
-            if status==0
-                jobs = strsplit(result,'G');
-                S    = numel(jobs) - 1; 
-                if S==N
-                    a = zeros(1,S);
-                    for s=1:S
-                        job  = jobs{s};                      
-                        job  = strsplit(job,' '); 
-                        a(s) = str2double(job{2});
-                    end
-
-                    a   = (1 + sd)*max(a);
-                    mem = ceil(a * 10)/10; % Ceil to one decimal place
-
-                    opt.job.mem{1} = [num2str(mem) 'G'];   
-                    
-                    break
-                else
-                   pause(1)
-                   
-                   continue 
-                end
-            else
-                opt.job.mem{1} = omem; 
-                
-                break
+            a = zeros(1,S);
+            for s=1:S
+                job  = jobs{s};                      
+                job  = strsplit(job,' '); 
+                a(s) = str2double(job{2});
             end
+
+            a   = (1 + sd)*max(a);
+            mem = ceil(a * 10)/10; % Ceil to one decimal place
+
+            opt.job.mem{1} = [num2str(mem) 'G'];  
+        else
+            opt.job.mem{1} = omem; 
         end
         
         if opt.verbose
@@ -836,32 +825,18 @@ function opt = estimate_mem(opt,N)
             cmd = [cmd opt.sched.acct ' '];
             cmd = [cmd ' -j ' num2str(jobid) ' | grep maxvmem"'];
 
-            do_pause = true;
-            while true
-                [status,result] = system(cmd);   
+            [status,result] = system(cmd);   
 
-                if status==0
-                    job = strsplit(result,'G');    
-                    job = strsplit(job{1},' '); 
-                    a   = str2double(job{2});
-                    a   = (1 + sd)*a;
-                    mem = ceil(a * 10)/10; % Ceil to one decimal place
+            if status==0
+                job = strsplit(result,'G');    
+                job = strsplit(job{1},' '); 
+                a   = str2double(job{2});
+                a   = (1 + sd)*a;
+                mem = ceil(a * 10)/10; % Ceil to one decimal place
 
-                    opt.job.mem{n} = [num2str(mem) 'G']; 
-                    
-                    break
-                else
-                    if do_pause
-                        pause(2)
-                        do_pause = false;
-                        
-                        continue
-                    else
-                        opt.job.mem{n} = omem; 
-
-                        break
-                    end
-                end
+                opt.job.mem{n} = [num2str(mem) 'G']; 
+            else
+                opt.job.mem{n} = omem; 
             end
             
             if opt.verbose
