@@ -907,7 +907,7 @@ end
 function fprintf_job(opt,N,t)            
     date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
     if nargin<3        
-        fprintf('----------------------------------------------\n')
+        fprintf('\n----------------------------------------------\n')
         if opt.job.batch
             fprintf('%s | Batch job submitted to cluster (N = %i)\n',date,N)
         else
