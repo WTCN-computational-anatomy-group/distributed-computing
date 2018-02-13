@@ -27,6 +27,7 @@ function opt = distribute_default(opt)
 % -----------
 % ssh.type      - SSH software to use 'ssh'/'putty'/[try to detect]
 % ssh.bin       - Path to the ssh binary [try to detect]
+% ssh.opt       - SSH options ['-x']
 % sched.sub     - Path to the submit binary [try to detect]
 % sched.stat    - Path to the stat binary [try to detect]
 % sched.acct    - Path to the acct binary [try to detect]
@@ -44,6 +45,7 @@ function opt = distribute_default(opt)
 % ------
 % matlab.bin    - Path to matlab binary [try to detect]
 % matlab.add    - Paths to add to Matlab path [{}]
+% matlab.addsub - Paths to add to Matlab path, with subdorectories [{}]
 % matlab.opt    - Commandline options to pass to matlab
 %                 [{'-nojvm' '-nodesktop' '-nosplash' '-singleCompThread'}]
 % spm.path      - Path to SPM [try to detect]
