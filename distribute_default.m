@@ -128,6 +128,13 @@ function opt = distribute_default(opt)
     if isempty(opt.ssh.bin) && ~isempty(opt.server.ip)
         warning('Could not find an ssh binary')
     end
+    if ~isfield(opt.ssh, 'opt')
+        if strcmpi(opt.ssh.type, 'ssh') 
+            opt.ssh.opt = '-x';
+        else
+            opt.ssh.opt = '';
+        end
+    end
     if ~isfield(opt.server, 'source')
         % Need ssh for that
         opt.server.source = auto_detect('source', opt);
@@ -161,12 +168,6 @@ function opt = distribute_default(opt)
     if ~isfield(opt.job, 'est_mem')
         opt.job.est_mem = true;
     end
-    if ~isfield(opt.job, 'sd')
-        opt.job.sd = 0.1;
-    end
-    if ~isfield(opt.job, 'use_dummy')
-        opt.job.use_dummy = false;
-    end
     if ~isfield(opt, 'optim')
         opt.optim = struct;
     end
@@ -196,6 +197,12 @@ function opt = distribute_default(opt)
     end
     if ~iscell(opt.matlab.add)
         opt.matlab.add = {opt.matlab.add};
+    end
+    if ~isfield(opt.matlab, 'addsub')
+        opt.matlab.addsub = {};
+    end
+    if ~iscell(opt.matlab.addsub)
+        opt.matlab.addsub = {opt.matlab.addsub};
     end
     if ~isfield(opt.matlab, 'opt')
         opt.matlab.opt = '-nojvm -nodesktop -nosplash -singleCompThread';
@@ -245,10 +252,14 @@ function opt = distribute_default(opt)
     if ~isempty(opt.matlab.priv.add)
         opt.matlab.priv.add = opt.matlab.priv.add(1:end-1);
     end
+    opt.matlab.priv.addsub = '';
+    for i=1:numel(opt.matlab.addsub)
+        opt.matlab.priv.addsub = [opt.matlab.priv.addsub 'genpath(''' opt.matlab.add{i} '''),'];
+    end
+    if ~isempty(opt.matlab.priv.addsub)
+        opt.matlab.priv.addsub = opt.matlab.priv.addsub(1:end-1);
+    end
     
-    opt.client.folder = fullfile(opt.client.folder,'cluster');
-    opt.server.folder = fullfile(opt.server.folder,'cluster');
-        
     if opt.clean && exist(opt.client.folder,'dir')
         rmdir(opt.client.folder,'s');
         mkdir(opt.client.folder); 
@@ -283,7 +294,7 @@ function varargout = auto_detect(id, varargin)
 end
 
 function ok = sshexist(opt, file)
-    call = [opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     if isfield(opt.server, 'source')
         for i=1:numel(opt.server.source)
             call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
@@ -295,7 +306,7 @@ function ok = sshexist(opt, file)
 end
 
 function path = sshpath(opt)
-    call = [opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     if isfield(opt.server, 'source')
         for i=1:numel(opt.server.source)
             call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
@@ -308,19 +319,19 @@ function path = sshpath(opt)
 end
 
 function ok = sshcommandst(opt, cmd)
-    call = [opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     if isfield(opt.server, 'source')
         for i=1:numel(opt.server.source)
             call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
         end
     end
-    call = [call 'cmd" >/dev/null 2>&1'];
+    call = [call cmd '" >/dev/null 2>&1'];
     st = system(call);
     ok = (st == 0);
 end
 
 function path = sshwhich(opt, bin)
-    call = [opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     if isfield(opt.server, 'source')
         for i=1:numel(opt.server.source)
             call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
