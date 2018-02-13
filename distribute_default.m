@@ -170,6 +170,12 @@ function opt = distribute_default(opt)
     if ~isfield(opt.job, 'est_mem')
         opt.job.est_mem = true;
     end
+    if ~isfield(opt.job, 'sd')
+        opt.job.sd = 0.1;
+    end
+    if ~isfield(opt.job, 'use_dummy')
+        opt.job.use_dummy = false;
+    end
     if ~isfield(opt, 'optim')
         opt.optim = struct;
     end
