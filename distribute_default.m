@@ -27,6 +27,7 @@ function opt = distribute_default(opt)
 % -----------
 % ssh.type      - SSH software to use 'ssh'/'putty'/[try to detect]
 % ssh.bin       - Path to the ssh binary [try to detect]
+% ssh.opt       - SSH options ['-x']
 % sched.sub     - Path to the submit binary [try to detect]
 % sched.stat    - Path to the stat binary [try to detect]
 % sched.acct    - Path to the acct binary [try to detect]
@@ -44,6 +45,7 @@ function opt = distribute_default(opt)
 % ------
 % matlab.bin    - Path to matlab binary [try to detect]
 % matlab.add    - Paths to add to Matlab path [{}]
+% matlab.addsub - Paths to add to Matlab path, with subdorectories [{}]
 % matlab.opt    - Commandline options to pass to matlab
 %                 [{'-nojvm' '-nodesktop' '-nosplash' '-singleCompThread'}]
 % spm.path      - Path to SPM [try to detect]
@@ -128,6 +130,13 @@ function opt = distribute_default(opt)
     if isempty(opt.ssh.bin) && ~isempty(opt.server.ip)
         warning('Could not find an ssh binary')
     end
+    if ~isfield(opt.ssh, 'opt')
+        if strcmpi(opt.ssh.type, 'ssh') 
+            opt.ssh.opt = '-x';
+        else
+            opt.ssh.opt = '';
+        end
+    end
     if ~isfield(opt.server, 'source')
         % Need ssh for that
         opt.server.source = auto_detect('source', opt);
@@ -197,6 +206,12 @@ function opt = distribute_default(opt)
     if ~iscell(opt.matlab.add)
         opt.matlab.add = {opt.matlab.add};
     end
+    if ~isfield(opt.matlab, 'addsub')
+        opt.matlab.addsub = {};
+    end
+    if ~iscell(opt.matlab.addsub)
+        opt.matlab.addsub = {opt.matlab.addsub};
+    end
     if ~isfield(opt.matlab, 'opt')
         opt.matlab.opt = '-nojvm -nodesktop -nosplash -singleCompThread';
     end
@@ -245,10 +260,14 @@ function opt = distribute_default(opt)
     if ~isempty(opt.matlab.priv.add)
         opt.matlab.priv.add = opt.matlab.priv.add(1:end-1);
     end
+    opt.matlab.priv.addsub = '';
+    for i=1:numel(opt.matlab.addsub)
+        opt.matlab.priv.addsub = [opt.matlab.priv.addsub 'genpath(''' opt.matlab.add{i} '''),'];
+    end
+    if ~isempty(opt.matlab.priv.addsub)
+        opt.matlab.priv.addsub = opt.matlab.priv.addsub(1:end-1);
+    end
     
-    opt.client.folder = fullfile(opt.client.folder,'cluster');
-    opt.server.folder = fullfile(opt.server.folder,'cluster');
-        
     if opt.clean && exist(opt.client.folder,'dir')
         rmdir(opt.client.folder,'s');
         mkdir(opt.client.folder); 
@@ -283,7 +302,7 @@ function varargout = auto_detect(id, varargin)
 end
 
 function ok = sshexist(opt, file)
-    call = [opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     if isfield(opt.server, 'source')
         for i=1:numel(opt.server.source)
             call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
@@ -295,7 +314,7 @@ function ok = sshexist(opt, file)
 end
 
 function path = sshpath(opt)
-    call = [opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     if isfield(opt.server, 'source')
         for i=1:numel(opt.server.source)
             call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
@@ -308,19 +327,19 @@ function path = sshpath(opt)
 end
 
 function ok = sshcommandst(opt, cmd)
-    call = [opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     if isfield(opt.server, 'source')
         for i=1:numel(opt.server.source)
             call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
         end
     end
-    call = [call 'cmd" >/dev/null 2>&1'];
+    call = [call cmd '" >/dev/null 2>&1'];
     st = system(call);
     ok = (st == 0);
 end
 
 function path = sshwhich(opt, bin)
-    call = [opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     if isfield(opt.server, 'source')
         for i=1:numel(opt.server.source)
             call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];

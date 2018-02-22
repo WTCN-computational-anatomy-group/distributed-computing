@@ -269,7 +269,11 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
 
     % Filenames
     % ---------
-    uid      = char(java.util.UUID.randomUUID()); % General UID
+    if exist('java.util.UUID', 'class')
+        uid      = char(java.util.UUID.randomUUID()); % General UID
+    else
+        uid = datestr(now, 'yyyymmddTHHMMSS');
+    end
     mainname = ['main_' uid];
     fnames   = ['fnames_' uid '.mat'];     % job nb <-> data filename
     matin    = cell(1,N);                  % input data filenames
@@ -285,7 +289,11 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     % Write data
     % ----------
     for n=1:N
-        uid1 = char(java.util.UUID.randomUUID());
+        if exist('java.util.UUID', 'class')
+            uid1 = char(java.util.UUID.randomUUID());
+        else
+            uid1 = num2str(n);
+        end
         matin{n}   = ['in_' uid '_' uid1 '.mat'];
         matout{n}  = ['out_' uid '_' uid1 '.mat'];
         
@@ -325,7 +333,10 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
         '\n'                        ...
         'matlab_cmd="'];
     if ~isempty(opt.matlab.priv.add)
-        batch_script = [batch_script 'addpath(genpath(' opt.matlab.priv.add '));'];
+        batch_script = [batch_script 'addpath(' opt.matlab.priv.add ');'];
+    end
+    if ~isempty(opt.matlab.priv.addsub)
+        batch_script = [batch_script 'addpath(' opt.matlab.priv.addsub ');'];
     end
     batch_script = [batch_script ...
             'load(fullfile(''' opt.server.folder ''',''' fnames '''),''matin'',''matout'');' ...
@@ -349,7 +360,7 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     for i=1:numel(opt.client.source)
         cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
     end
-    cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     for i=1:numel(opt.server.source)
         cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
     end
@@ -404,7 +415,7 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     for i=1:numel(opt.client.source)
         cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
     end
-    cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     for i=1:numel(opt.server.source)
         cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
     end
@@ -526,11 +537,20 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     mainerr  = cell(1,N);
     matin    = cell(1,N);
     matout   = cell(1,N);
+    if exist('java.util.UUID', 'class')
+        uid1 = ''; % General UID
+    else
+        uid1 = datestr(now, 'yyyymmddTHHMMSS');
+    end
     for n=1:N
 
         % Filenames
         % ---------
-        uid         = char(java.util.UUID.randomUUID()); % General UID
+        if exist('java.util.UUID', 'class')
+            uid = char(java.util.UUID.randomUUID());
+        else
+            uid = [uid1 '_' num2str(n)];
+        end
         mainname{n} = ['main_' uid];
         mainsh{n}   = ['main_' uid '.sh'];        % main bash script
         mainout{n}  = ['main_cout_' uid '.log'];  % main output file
@@ -572,7 +592,10 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
             '\n'                        ...
             'matlab_cmd="'];
         if ~isempty(opt.matlab.priv.add)
-            batch_script = [batch_script 'addpath(genpath(' opt.matlab.priv.add '));'];
+            batch_script = [batch_script 'addpath(' opt.matlab.priv.add ');'];
+        end
+        if ~isempty(opt.matlab.priv.addsub)
+            batch_script = [batch_script 'addpath(' opt.matlab.priv.addsub ');'];
         end
         batch_script = [batch_script ...
                 'load(fullfile(''' opt.server.folder ''',''' matin{n} '''),''argin'');' ...
@@ -595,7 +618,7 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
         for i=1:numel(opt.client.source)
             cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
         end
-        cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+        cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
         for i=1:numel(opt.server.source)
             cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
         end
@@ -657,7 +680,7 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     for i=1:numel(opt.client.source)
         cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
     end
-    cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+    cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
     for i=1:numel(opt.server.source)
         cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
     end
@@ -777,7 +800,7 @@ function opt = estimate_mem(opt,N)
         for i=1:numel(opt.client.source)
             cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
         end
-        cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+        cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
         for i=1:numel(opt.server.source)
             cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
         end
@@ -818,7 +841,7 @@ function opt = estimate_mem(opt,N)
             for i=1:numel(opt.client.source)
                 cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
             end
-            cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
+            cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
             for i=1:numel(opt.server.source)
                 cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
             end
@@ -884,7 +907,7 @@ end
 function fprintf_job(opt,N,t)            
     date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
     if nargin<3        
-        fprintf('----------------------------------------------\n')
+        fprintf('\n----------------------------------------------\n')
         if opt.job.batch
             fprintf('%s | Batch job submitted to cluster (N = %i)\n',date,N)
         else
