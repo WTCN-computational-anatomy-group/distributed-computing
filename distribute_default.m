@@ -262,7 +262,7 @@ function opt = distribute_default(opt)
     end
     opt.matlab.priv.addsub = '';
     for i=1:numel(opt.matlab.addsub)
-        opt.matlab.priv.addsub = [opt.matlab.priv.addsub 'genpath(''' opt.matlab.add{i} '''),'];
+        opt.matlab.priv.addsub = [opt.matlab.priv.addsub 'genpath(''' opt.matlab.addsub{i} '''),'];
     end
     if ~isempty(opt.matlab.priv.addsub)
         opt.matlab.priv.addsub = opt.matlab.priv.addsub(1:end-1);
