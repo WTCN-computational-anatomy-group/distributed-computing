@@ -2,13 +2,13 @@ function varargout = distribute_translate(opt, varargin)
 % FORMAT [out1, ...] = distribute_translate(trans, arg1, ...,)
 %
 % opt - Option structure with fields:
-%     translation - Cell array of size 2xN with translation between client 
-%                   and server paths [{client.folder server.folder}].
-%                   Example:
-%                       {'/home/me/'     '/mnt/users/me/' ;
-%                        '/shared/data/' '/mnt/shared/data'}
-%     restrict    - Restrict translation to either 'char' or 'file_array'
-%                   objects. If empty, do not restrict.
+%     translate - Cell array of size 2xN with translation between client 
+%                 and server paths [{client.folder server.folder}].
+%                 Example:
+%                     {'/home/me/'     '/mnt/users/me/' ;
+%                      '/shared/data/' '/mnt/shared/data'}
+%     restrict  - Restrict translation to either 'char' or 'file_array'
+%                 objects. If empty, do not restrict.
 % arg   - Argument that needs translation (string, file_array, struct, ...)
 
     if isfield(opt, 'server_to_client') && opt.server_to_client
