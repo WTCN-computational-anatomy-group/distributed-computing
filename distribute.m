@@ -434,7 +434,7 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     
     start_track = tic;
     while 1
-        pause(1); % Do not refresh too often
+        pause(10); % Do not refresh too often
         
         [~, result] = system(cmd);
         
@@ -702,7 +702,7 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     
     start_track = tic;
     while 1
-        pause(1); % Do not refresh too often
+        pause(10); % Do not refresh too often
         
         [~, result] = system(cmd);
         
