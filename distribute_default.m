@@ -58,9 +58,9 @@ function opt = distribute_default(opt)
 %             Example:
 %                  {'/home/me/'     '/mnt/users/me/' ;
 %                   '/shared/data/' '/mnt/shared/data'}
-% restrict  - Restrict translation to a class: 'char'/'file_array'/['']
-% clean     - Clean tmp data when finished [true]
-% 
+% restrict   - Restrict translation to a class: 'char'/'file_array'/['']
+% clean      - Clean tmp data when finished [true]
+% clean_init - Initially clean tmp data [false]
 % _________________________________________________________________________
 
     if nargin < 1
@@ -240,6 +240,9 @@ function opt = distribute_default(opt)
     if ~isfield(opt, 'clean')
         opt.clean = true;
     end
+    if ~isfield(opt, 'clean_init')
+        opt.clean_init = false;
+    end    
     if ~isfield(opt, 'verbose')
         opt.verbose = true;
     end
@@ -268,7 +271,7 @@ function opt = distribute_default(opt)
         opt.matlab.priv.addsub = opt.matlab.priv.addsub(1:end-1);
     end
     
-    if opt.clean && exist(opt.client.folder,'dir')
+    if opt.clean_init && exist(opt.client.folder,'dir')
         rmdir(opt.client.folder,'s');
         mkdir(opt.client.folder); 
     elseif ~exist(opt.client.folder,'dir')
