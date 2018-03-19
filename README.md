@@ -11,12 +11,12 @@ This project contains a set of functions to help distribute the execution of Mat
 - The client should be able to connect to the cluster without having to type a password. This is usually managed by registering RSA keys on the cluster. On linux, this is done by
 
     1) Generate a set of public and private keys
-    ```
+    ```shell
     ssh-keygen -t rsa
     ```
 
     2) Register the key with the cluster
-    ```
+    ```shell
     ssh-copy-id login@cluster
     ```
 
@@ -33,7 +33,7 @@ This project contains a set of functions to help distribute the execution of Mat
 First an option structure must be generated with the `distribute_default` function. Beforehand, a number of mandatory options should be manually set (else, jobs wil be run locally).
 
 Here is an example of a typical configuration:
-```
+```matlab
 opt = struct;
 
 opt.server.ip      = 'cluster.university.ac.uk';
@@ -54,50 +54,50 @@ Several additional options can be set in order to specify the cluster configurat
 
 #### CLUSTER
 ```
-server.ip     - IP adress (or alias name) of the cluster ['' = no cluster]
-server.login  - Login with which to connect ['']
-server.source - Files to source on server side [auto > Try to find bashrc and/or bash_profile]
+server.ip     - IP adress (or alias name) of the cluster                    - ['' = no cluster]
+server.login  - Login with which to connect                                 - ['']
+server.source - Files to source on server side                              - [try to find bashrc and/or bash_profile]
 server.folder - Shared folder for writing data, scripts, etc.
 ```
 
 #### LOCAL
 ```
-client.source  - Files to source on server side [auto]
-client.workers - Number of local workers [auto]
+client.source  - Files to source on server side                             - [auto]
+client.workers - Number of local workers                                    - [auto]
 client.folder  - Shared folder for writing data, scripts, etc.
 ```
 
 #### SUBMIT JOBS
 ```
-ssh.type    - SSH software to use 'ssh'/'putty'/[try to detect]
-ssh.bin     - Path to the ssh binary [try to detect]
-sched.sub   - Path to the submit binary [try to detect]
-sched.stat  - Path to the stat binary [try to detect]
-sched.type  - Type of scheduler 'sge'/'pbs'/[try to detect]
-job.batch   - Submit jobs as a batch (force same mem for all) [true]
-job.mem     - (Initial) Max memory usage by a single job ['2G']
-job.est_mem - Estimate max memory usage from previous runs [true]
-optim.optim - Try to optimise distribution between cluster and local [true]
-optim.busy  - Business threshold for which local is preferred over cluster [0.9]
+ssh.type    - SSH software to use 'ssh'/'putty'                             - [try to detect]
+ssh.bin     - Path to the ssh binary                                        - [try to detect]
+sched.sub   - Path to the submit binary                                     - [try to detect]
+sched.stat  - Path to the stat binary                                       - [try to detect]
+sched.type  - Type of scheduler 'sge'/'pbs'                                 - [try to detect]
+job.batch   - Submit jobs as a batch (force same mem for all)               - [true]
+job.mem     - (Initial) Max memory usage by a single job                    - ['2G']
+job.est_mem - Estimate max memory usage from previous runs                  - [true]
+optim.optim - Try to optimise distribution between cluster and local        - [true]
+optim.busy  - Business threshold for which local is preferred over cluster  - [0.9]
 ```
 
 #### MATLAB
 ```
-matlab.bin    - Path to matlab binary [try to detect]
-matlab.add    - Paths to add to Matlab path [{}]
-matlab.opt    - Commandline options to pass to matlab ['-nojvm -nodesktop -nosplash -singleCompThread']
-spm.path      - Path to SPM [try to detect]
-spm.toolboxes - List of SPM toolboxes to add to Matlab path [{}]
+matlab.bin    - Path to matlab binary                                       - [try to detect]
+matlab.add    - Paths to add to Matlab path                                 - [{}]
+matlab.opt    - Commandline options to pass to matlab                       - ['-nojvm -nodesktop -nosplash -singleCompThread']
+spm.path      - Path to SPM                                                 - [try to detect]
+spm.toolboxes - List of SPM toolboxes to add to Matlab path                 - [{}]
 ```
 
 #### DATA
 ```
-translate - Cell array of size 2xN with translation between client and server paths [{client.folder server.folder}].
-            Example:
+translate - Cell array of size 2xN with translation between client and      - [{client.folder server.folder}].
+            server paths. Example:
                  {'/home/me/'     '/mnt/users/me/' ;
                   '/shared/data/' '/mnt/shared/data'}
-restrict  - Restrict translation to a class: 'char'/'file_array'/['']
-clean     - Clean tmp data when finished [true]
+restrict  - Restrict translation to a class: 'char'/'file_array'            - ['']
+clean     - Clean tmp data when finished                                    - [true]
 ```
 
 ### Run
@@ -158,3 +158,16 @@ We intend to allow:
 - job batching, where a single job processes several "subjects".
 - optimising cluster use by choosing between local and distributed processing based on the cluster load.
 - distributing scripts/binaries on top of Matlab functions. This can be helpful for working with compiled Matlab scripts.
+
+## Contributors
+
+This software was developed by Mikael Brudfors and Yaël Balbastre in John Ashburner's [Computational Anatomy Group](http://www.fil.ion.ucl.ac.uk/Ashburner/) at the [Wellcome Centre for Human Neuroimaging](http://www.fil.ion.ucl.ac.uk/) in UCL.
+
+If you encounter any difficulty, please send an email to `y.balbastre` or `mikael.brudfors.15` _at_ `ucl.ac.uk`
+
+## License
+
+This software is released under the [GNU General Public License version 3](LICENSE) (GPL v3). As a result, you may copy, distribute and modify the software as long as you track changes/dates in source files. Any modifications to or software including (via compiler) GPL-licensed code must also be made available under the GPL along with build & install instructions.
+
+
+[TL;DR: GPL v3](https://tldrlegal.com/license/gnu-general-public-license-v3-(gpl-3))
