@@ -12,13 +12,15 @@ dist.server.folder  = '/data/ybalba/distribute';
 dist.client.folder  = '/Users/balbasty/Desktop/FIL/data/distribute';
 
 dist.matlab.bin     = '/share/apps/matlab';
-% dist.matlab.add     = {'/data/ybalba/matlab/shape-toolbox' ...
-%                        '/data/ybalba/matlab/utility-functions'};
-% dist.spm.path       = '/data/ybalba/matlab/spm-trunk';
-% dist.spm.toolboxes  = {'Shoot'};
+dist.matlab.add     = {'/data/ybalba/matlab/shape-toolbox' ...
+                       '/data/ybalba/matlab/utility-functions'};
+dist.matlab.addsub  = '/data/ybalba/matlab/viewers-toolbox';
+dist.spm.path       = '/data/ybalba/matlab/spm-trunk';
+dist.spm.toolboxes  = {'Shoot'};
 
 dist.translate      = {'/Users/balbasty/Desktop/FIL/data' '/data/ybalba'};
 dist.restrict       = 'file_array';
+dist.clean          = false;
 
 dist = distribute_default(dist);
 
@@ -27,7 +29,7 @@ dist = distribute_default(dist);
 %  ------
 
 t = {60 60 60 60 60};
-foo = distribute(dist, @pause, 'iter', t);
+[dist,foo] = distribute(dist, @pause, 'iter', t);
 
 %% ------
 %  Test 2
