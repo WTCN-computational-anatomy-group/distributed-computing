@@ -149,7 +149,7 @@ function opt = distribute_default(opt)
     end
     if ~isfield(opt.sched, 'sub') ...
             || ~isfield(opt.sched, 'stat') ...
-            || ~isfield(opt.schet, 'acct')
+            || ~isfield(opt.sched, 'acct')
         [opt.sched.sub, opt.sched.stat, opt.sched.acct] = auto_detect('sched', opt);
     end
     if ~isfield(opt.sched, 'type')
@@ -268,12 +268,14 @@ function opt = distribute_default(opt)
         opt.matlab.priv.addsub = opt.matlab.priv.addsub(1:end-1);
     end
     
-    if opt.clean && exist(opt.client.folder,'dir')
-        rmdir(opt.client.folder,'s');
-        mkdir(opt.client.folder); 
-    elseif ~exist(opt.client.folder,'dir')
-        mkdir(opt.client.folder);   
-    end        
+    if ~isempty(opt.server.ip)
+        if opt.clean && exist(opt.client.folder,'dir')
+            rmdir(opt.client.folder,'s');
+            mkdir(opt.client.folder); 
+        elseif ~exist(opt.client.folder,'dir')
+            mkdir(opt.client.folder);   
+        end
+    end
 end
 
 % =========================================================================
