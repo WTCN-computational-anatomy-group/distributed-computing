@@ -37,18 +37,15 @@ function opt = distribute_default(opt)
 % job.est_mem   - Estimate max memory usage from previous runs [true]
 % job.sd        - Amount of extra memory to add to estimated max memory [0.1]
 % job.use_dummy - Uses a dummy job to decide when job have finished [false]
-% optim.optim   - Try to optimise distribution between cluster and local [true]
-% optim.busy    - Business threshold for which local is preferred over
-%               cluster [0.9]
 %
 % MATLAB
 % ------
 % matlab.bin    - Path to matlab binary [try to detect]
 % matlab.add    - Paths to add to Matlab path [{}]
-% matlab.addsub - Paths to add to Matlab path, with subdorectories [{}]
+% matlab.addsub - Paths to add to Matlab path, with subdirectories [{}]
 % matlab.opt    - Commandline options to pass to matlab
-%                 [{'-nojvm' '-nodesktop' '-nosplash' '-singleCompThread'}]
-% spm.path      - Path to SPM [try to detect]
+%                 ['-nojvm' '-nodesktop' '-nosplash' '-singleCompThread']
+% spm.path      - Path to SPM []
 % spm.toolboxes - List of SPM toolboxes to add to Matlab path [{}]
 %
 % DATA
@@ -58,15 +55,15 @@ function opt = distribute_default(opt)
 %             Example:
 %                  {'/home/me/'     '/mnt/users/me/' ;
 %                   '/shared/data/' '/mnt/shared/data'}
-% restrict  - Restrict translation to a class: 'char'/'file_array'/['']
-% clean     - Clean tmp data when finished [true]
-% 
+% restrict   - Restrict translation to a class: 'char'/'file_array'/['']
+% clean      - Clean tmp data when finished [true]
+% clean_init - Initially clean tmp data [false]
 % _________________________________________________________________________
 
     if nargin < 1
         opt = struct;
     end
-    
+
     % CLUSTER
     % -------
     if ~isfield(opt, 'server')
@@ -109,7 +106,7 @@ function opt = distribute_default(opt)
         opt.client.folder = opt.server.folder;
     end
 
-    
+
     % SUBMIT JOBS
     % -----------
     if ~isfield(opt, 'ssh')
@@ -131,7 +128,7 @@ function opt = distribute_default(opt)
         warning('Could not find an ssh binary')
     end
     if ~isfield(opt.ssh, 'opt')
-        if strcmpi(opt.ssh.type, 'ssh') 
+        if strcmpi(opt.ssh.type, 'ssh')
             opt.ssh.opt = '-x';
         else
             opt.ssh.opt = '';
@@ -191,7 +188,7 @@ function opt = distribute_default(opt)
     if ~isfield(opt.sh, 'bin')
         opt.sh.bin = '/bin/sh'; % I should actually try to detect it
     end
-    
+
     % MATLAB
     % ------
     if ~isfield(opt, 'matlab')
@@ -227,8 +224,8 @@ function opt = distribute_default(opt)
     if ~iscell(opt.spm.toolboxes)
         opt.spm.toolboxes = {opt.spm.toolboxes};
     end
-    
-    
+
+
     % DATA
     % ----
     if ~isfield(opt, 'translate')
@@ -240,10 +237,13 @@ function opt = distribute_default(opt)
     if ~isfield(opt, 'clean')
         opt.clean = true;
     end
+    if ~isfield(opt, 'clean_init')
+        opt.clean_init = false;
+    end
     if ~isfield(opt, 'verbose')
         opt.verbose = true;
     end
-    
+
     % BUILD ADDPATH STRING
     % --------------------
     opt.matlab.priv.add = '';
@@ -267,13 +267,13 @@ function opt = distribute_default(opt)
     if ~isempty(opt.matlab.priv.addsub)
         opt.matlab.priv.addsub = opt.matlab.priv.addsub(1:end-1);
     end
-    
+
     if ~isempty(opt.server.ip)
-        if opt.clean && exist(opt.client.folder,'dir')
+        if opt.clean_init && exist(opt.client.folder,'dir')
             rmdir(opt.client.folder,'s');
-            mkdir(opt.client.folder); 
+            mkdir(opt.client.folder);
         elseif ~exist(opt.client.folder,'dir')
-            mkdir(opt.client.folder);   
+            mkdir(opt.client.folder);
         end
     end
 end
@@ -355,7 +355,7 @@ function path = sshwhich(opt, bin)
         path = deblank(path);
     end
 end
-    
+
 % -------------------------------------------------------------------------
 %   ssh
 % -------------------------------------------------------------------------
@@ -400,7 +400,7 @@ function [bin, type] = auto_detect_ssh(type, opt)
                 bin = '';
                 return
             end
-                 
+
         elseif isunix
             call = '';
             for j=1:numel(opt.client.source)
@@ -440,7 +440,7 @@ function path = auto_detect_source(opt)
         path = '';
         return
     end
-    
+
     path = {};
     if isunix
         if sshexist(opt, '~/.bash_profile')
@@ -451,7 +451,7 @@ function path = auto_detect_source(opt)
             path = {'/etc/profile'};
         end
     end
-    
+
 end
 
 % -------------------------------------------------------------------------
@@ -516,7 +516,7 @@ function varargout = auto_detect_sched(varargin)
         end
         varargout{1} = type;
     end
-        
+
 end
 
 % -------------------------------------------------------------------------
@@ -528,7 +528,7 @@ function bin = auto_detect_matlab(opt)
         bin = '';
         return
     end
-    
+
     bin = '';
     path = sshpath(opt);
     for i=1:numel(path)

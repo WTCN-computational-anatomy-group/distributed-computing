@@ -69,35 +69,39 @@ client.folder  - Shared folder for writing data, scripts, etc.
 
 #### SUBMIT JOBS
 ```
-ssh.type    - SSH software to use 'ssh'/'putty'                             - [try to detect]
-ssh.bin     - Path to the ssh binary                                        - [try to detect]
-sched.sub   - Path to the submit binary                                     - [try to detect]
-sched.stat  - Path to the stat binary                                       - [try to detect]
-sched.type  - Type of scheduler 'sge'/'pbs'                                 - [try to detect]
-job.batch   - Submit jobs as a batch (force same mem for all)               - [true]
-job.mem     - (Initial) Max memory usage by a single job                    - ['2G']
-job.est_mem - Estimate max memory usage from previous runs                  - [true]
-optim.optim - Try to optimise distribution between cluster and local        - [true]
-optim.busy  - Business threshold for which local is preferred over cluster  - [0.9]
+ssh.type      - SSH software to use 'ssh'/'putty'                           - [try to detect]
+ssh.bin       - Path to the ssh binary                                      - [try to detect]
+ssh.opt       - SSH options                                                 - ['-x']
+sched.sub     - Path to the submit binary                                   - [try to detect]
+sched.stat    - Path to the stat binary                                     - [try to detect]
+sched.acct    - Path to the acct binary                                     - [try to detect]
+sched.type    - Type of scheduler 'sge'/'pbs'                               - [try to detect]
+job.batch     - Submit jobs as a batch (force same mem for all)             - [true]
+job.mem       - (Initial) Max memory usage by a single job                  - ['2G']
+job.est_mem   - Estimate max memory usage from previous runs                - [true]
+job.sd        - Amount of extra memory to add to estimated max memory       - [0.1]
+job.use_dummy - Uses a dummy job to decide when job have finished           - [false]
 ```
 
 #### MATLAB
 ```
 matlab.bin    - Path to matlab binary                                       - [try to detect]
 matlab.add    - Paths to add to Matlab path                                 - [{}]
+matlab.addsub - Paths to add to Matlab path, with subdirectories            - [{}]
 matlab.opt    - Commandline options to pass to matlab                       - ['-nojvm -nodesktop -nosplash -singleCompThread']
-spm.path      - Path to SPM                                                 - [try to detect]
+spm.path      - Path to SPM                                                 - []
 spm.toolboxes - List of SPM toolboxes to add to Matlab path                 - [{}]
 ```
 
 #### DATA
 ```
-translate - Cell array of size 2xN with translation between client and      - [{client.folder server.folder}].
-            server paths. Example:
-                 {'/home/me/'     '/mnt/users/me/' ;
-                  '/shared/data/' '/mnt/shared/data'}
-restrict  - Restrict translation to a class: 'char'/'file_array'            - ['']
-clean     - Clean tmp data when finished                                    - [true]
+translate  - Cell array of size 2xN with translation between client and     - [{client.folder server.folder}].
+             server paths. Example:
+                  {'/home/me/'     '/mnt/users/me/' ;
+                   '/shared/data/' '/mnt/shared/data'}
+restrict   - Restrict translation to a class: 'char'/'file_array'           - ['']
+clean      - Clean tmp data when finished                                   - [true]
+clean_init - Initially clean tmp data                                       - [false]
 ```
 
 ### Run
