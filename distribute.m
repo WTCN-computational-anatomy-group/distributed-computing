@@ -131,7 +131,7 @@ function varargout = distribute(opt, func, varargin)
         if opt.job.est_mem
             % Estimate new memory usage
             % ----------
-            opt = estimate_mem(opt,N);            
+            opt = estimate_mem(opt);            
         end
     elseif double(opt.client.workers) > 0
         [varargout{2:nargout}] = distribute_local(opt, func, args, flags, access, N);
@@ -465,13 +465,18 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     % fill output structure
     for n=1:N
         % read argout
-        if ~exist(fullfile(opt.client.folder, matout{n}), 'file')
-            warning('File nb %d (%s) still does not exist.', ...
+        try
+            load(fullfile(opt.client.folder, matout{n}), 'argout');
+            argout = distribute_translate(opt, argout); 
+        catch ME
+            warning('Error reading file %d (%s)\n', ...
                     n, fullfile(opt.client.folder, matout{n}))
-            continue;
+            for i=1:numel(ME.stack)
+                disp([ME.stack(i).name ', line ' num2str(ME.stack(i).line)]);
+            end
+            disp(ME.message)  
+            continue
         end
-        load(fullfile(opt.client.folder, matout{n}), 'argout');
-        argout = distribute_translate(opt, argout);
         % fill inplace
         j = 2;
         for i=1:numel(args)
@@ -727,14 +732,18 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     % fill output structure
     for n=1:N
         % read argout
-        if ~exist(fullfile(opt.client.folder, matout{n}), 'file')
-            warning('File nb %d (%s) still does not exist.', ...
+        try
+            load(fullfile(opt.client.folder, matout{n}), 'argout');
+            argout = distribute_translate(opt, argout); 
+        catch ME
+            warning('Error reading file %d (%s)\n', ...
                     n, fullfile(opt.client.folder, matout{n}))
-            
-            continue;
+            for i=1:numel(ME.stack)
+                disp([ME.stack(i).name ', line ' num2str(ME.stack(i).line)]);
+            end
+            disp(ME.message)  
+            continue
         end
-        load(fullfile(opt.client.folder, matout{n}), 'argout');
-        argout = distribute_translate(opt, argout);
         % fill inplace
         j = 2;
         for i=1:numel(args)
@@ -776,7 +785,7 @@ end
 %   Estimate memory usage
 % -------------------------------------------------------------------------
 
-function opt = estimate_mem(opt,N)               
+function opt = estimate_mem(opt)
     sd = opt.job.sd;
     
     if opt.job.batch                
