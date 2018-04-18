@@ -46,7 +46,7 @@ function varargout = distribute(opt, func, varargin)
 %
 % Let 'a' and 'b' be lists (cell array) of numeric arrays. We want to
 % compute all sums a{i} + b{i}. We would call:
-% >> c = distribute(opt, 'plus', 'iter', a, 'iter', b);
+% >> [opt,c] = distribute(opt, 'plus', 'iter', a, 'iter', b);
 %
 % It will perform the equivalent of:
 % >> c = cell(size(a));
@@ -55,7 +55,7 @@ function varargout = distribute(opt, func, varargin)
 % >> end
 %
 % To perform the same operation in place:
-% >> a = distribute(opt, 'plus', 'inplace', a, 'iter', b);
+% >> [opt,a] = distribute(opt, 'plus', 'inplace', a, 'iter', b);
 %
 % which is equivalent to:
 % >> for i=1:numel(a)
@@ -68,7 +68,7 @@ function varargout = distribute(opt, func, varargin)
 % Let 'dat' be a structure array. We want to apply the function 
 % 'processOneData' to each of its elements. Let 'info' be a structure 
 % which is useful to all of dat elements. We would call:
-% >> dat = distribute(opt, 'processOneData', 'inplace', dat, info)
+% >> [opt,dat] = distribute(opt, 'processOneData', 'inplace', dat, info)
 %
 % It will perform the equivalent of:
 % >> for i=1:numel(dat)
@@ -131,7 +131,7 @@ function varargout = distribute(opt, func, varargin)
         if opt.job.est_mem
             % Estimate new memory usage
             % ----------
-            opt = estimate_mem(opt,N);            
+            opt = estimate_mem(opt);            
         end
     elseif double(opt.client.workers) > 0
         [varargout{2:nargout}] = distribute_local(opt, func, args, flags, access, N);
@@ -283,7 +283,7 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     mainerr  = ['main_cerr_' uid '.log'];  % main error file
     
     if opt.job.use_dummy
-        [dummy_nam,dummy_sh,dummy_out,dummy_err] = create_dummy_job(opt);
+        [~,dummy_sh,dummy_out,dummy_err] = create_dummy_job(opt);
     end
     
     % Write data
@@ -465,13 +465,18 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     % fill output structure
     for n=1:N
         % read argout
-        if ~exist(fullfile(opt.client.folder, matout{n}), 'file')
-            warning('File nb %d (%s) still does not exist.', ...
+        try
+            load(fullfile(opt.client.folder, matout{n}), 'argout');
+            argout = distribute_translate(opt, argout); 
+        catch ME
+            warning('Error reading file %d (%s)\n', ...
                     n, fullfile(opt.client.folder, matout{n}))
-            continue;
+            for i=1:numel(ME.stack)
+                disp([ME.stack(i).name ', line ' num2str(ME.stack(i).line)]);
+            end
+            disp(ME.message)  
+            continue
         end
-        load(fullfile(opt.client.folder, matout{n}), 'argout');
-        argout = distribute_translate(opt, argout);
         % fill inplace
         j = 2;
         for i=1:numel(args)
@@ -498,19 +503,12 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     if opt.clean
         names = [{mainsh mainout mainerr ...
                  fnames} matin matout];
+        if opt.job.use_dummy
+            names = [names {dummy_sh dummy_out dummy_err}];
+        end
         for i=1:numel(names)
             if exist(fullfile(opt.client.folder, names{i}), 'file')
                 delete(fullfile(opt.client.folder, names{i}));
-            end
-        end
-        
-        if opt.job.use_dummy
-            names = {dummy_sh,dummy_out,dummy_err};
-            
-            for i=1:numel(names)
-                if exist(fullfile(opt.client.folder, names{i}), 'file')
-                    delete(fullfile(opt.client.folder, names{i}));
-                end
             end
         end
     end
@@ -528,7 +526,7 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     end
 
     if opt.job.use_dummy
-        [dummy_nam,dummy_sh,dummy_out,dummy_err] = create_dummy_job(opt);
+        [~,dummy_sh,dummy_out,dummy_err] = create_dummy_job(opt);
     end
     
     mainname = cell(1,N);
@@ -734,13 +732,18 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     % fill output structure
     for n=1:N
         % read argout
-        if ~exist(fullfile(opt.client.folder, matout{n}), 'file')
-            warning('File nb %d (%s) still does not exist.', ...
+        try
+            load(fullfile(opt.client.folder, matout{n}), 'argout');
+            argout = distribute_translate(opt, argout); 
+        catch ME
+            warning('Error reading file %d (%s)\n', ...
                     n, fullfile(opt.client.folder, matout{n}))
-            continue;
+            for i=1:numel(ME.stack)
+                disp([ME.stack(i).name ', line ' num2str(ME.stack(i).line)]);
+            end
+            disp(ME.message)  
+            continue
         end
-        load(fullfile(opt.client.folder, matout{n}), 'argout');
-        argout = distribute_translate(opt, argout);
         % fill inplace
         j = 2;
         for i=1:numel(args)
@@ -766,19 +769,12 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     % ----------
     if opt.clean
         names = [mainsh mainout mainerr matin matout];
+        if opt.job.use_dummy
+            names = [names {dummy_sh dummy_out dummy_err}];
+        end
         for i=1:numel(names)
             if exist(fullfile(opt.client.folder, names{i}), 'file')
                 delete(fullfile(opt.client.folder, names{i}));
-            end
-        end
-        
-        if opt.job.use_dummy
-            names = {dummy_sh,dummy_out,dummy_err};
-            
-            for i=1:numel(names)
-                if exist(fullfile(opt.client.folder, names{i}), 'file')
-                    delete(fullfile(opt.client.folder, names{i}));
-                end
             end
         end
     end
@@ -789,7 +785,7 @@ end
 %   Estimate memory usage
 % -------------------------------------------------------------------------
 
-function opt = estimate_mem(opt,N)               
+function opt = estimate_mem(opt)
     sd = opt.job.sd;
     
     if opt.job.batch                
@@ -863,7 +859,8 @@ function opt = estimate_mem(opt,N)
             end
             
             if opt.verbose
-                fprintf('New memory usage is %s (old memory was %s)\n',opt.job.mem{n},omem);
+                fprintf('New memory usage is %s (old memory was %s)\n',...
+                    opt.job.mem{n},omem);
             end
         end
     end
