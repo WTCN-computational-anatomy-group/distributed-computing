@@ -551,3 +551,14 @@ function path = auto_detect_spm(opt)
     end
     path = '';
 end
+
+% -------------------------------------------------------------------------
+%   Backward compatibility
+% -------------------------------------------------------------------------
+function out = newline
+    if exist('newline','builtin')
+        out = builtin('newline');
+        return
+    end
+    out = char(10);    
+end

@@ -1,5 +1,5 @@
 function varargout = distribute_translate(opt, varargin)
-% FORMAT [out1, ...] = distribute_translate(trans, arg1, ...,)
+% FORMAT [out1, ...] = distribute_translate(opt, arg1, ...,)
 %
 % opt - Option structure with fields:
 %     translate - Cell array of size 2xN with translation between client 
@@ -10,6 +10,10 @@ function varargout = distribute_translate(opt, varargin)
 %     restrict  - Restrict translation to either 'char' or 'file_array'
 %                 objects. If empty, do not restrict.
 % arg   - Argument that needs translation (string, file_array, struct, ...)
+
+    if isempty(opt.translate)
+        varargout = varargin;
+    end
 
     if isfield(opt, 'server_to_client') && opt.server_to_client
         if ~isempty(opt.translate)
