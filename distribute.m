@@ -261,525 +261,6 @@ function varargout = distribute_not(~, func, args, flags, access, N)
     end
 end
 
-% -------------------------------------------------------------------------
-%   Distribute on server (batch)
-% -------------------------------------------------------------------------
-
-function varargout = distribute_server_batch(opt, func, args, flags, access, N)
-
-    % Filenames
-    % ---------
-    if exist('java.util.UUID', 'class')
-        uid      = char(java.util.UUID.randomUUID()); % General UID
-    else
-        uid = datestr(now, 'yyyymmddTHHMMSS');
-    end
-    mainname = ['main_' uid];
-    fnames   = ['fnames_' uid '.mat'];     % job nb <-> data filename
-    matin    = cell(1,N);                  % input data filenames
-    matout   = cell(1,N);                  % output data filenames
-    mainsh   = ['main_' uid '.sh'];        % main bash script
-    mainout  = ['main_cout_' uid '.log'];  % main output file
-    mainerr  = ['main_cerr_' uid '.log'];  % main error file
-    
-    if opt.job.use_dummy
-        [~,dummy_sh,dummy_out,dummy_err] = create_dummy_job(opt);
-    end
-    
-    % Write data
-    % ----------
-    for n=1:N
-        if exist('java.util.UUID', 'class')
-            uid1 = char(java.util.UUID.randomUUID());
-        else
-            uid1 = num2str(n);
-        end
-        matin{n}   = ['in_' uid '_' uid1 '.mat'];
-        matout{n}  = ['out_' uid '_' uid1 '.mat'];
-        
-        argin = cell(size(args));
-        for i=1:numel(args)
-            switch lower(flags{i})
-                case ''
-                    argin{i} = args{i};
-                case {'iter', 'inplace'}
-                    switch lower(access{i})
-                        case '()'
-                            argin{i} = args{i}(n);
-                        case '{}'
-                            argin{i} = args{i}{n};
-                    end
-            end
-        end
-        argin = distribute_translate(opt, argin);
-        save(fullfile(opt.client.folder, matin{n}), 'argin', '-mat'); 
-        clear argin
-        
-    end
-    save(fullfile(opt.client.folder, fnames), 'matin', 'matout', '-mat');
-    
-    % Write main script
-    % -----------------
-    % It runs each subject job
-    batch_script = [             ...
-        '#!' opt.sh.bin '\n'     ...
-        '\n'                     ...
-        '#$ -S ' opt.sh.bin '\n' ... % Shell path
-        '#$ -N ' mainname '\n'   ... % Job name
-        '#$ -o ' fullfile(opt.server.folder,mainout) '\n'  ... % Path to output file
-        '#$ -e ' fullfile(opt.server.folder,mainerr) '\n'  ... % Path to error file
-        '#$ -j n \n'                ... % Do not join out/err files
-        '#$ -t 1-' num2str(N) ' \n' ... % Number of subjobs
-        '\n'                        ...
-        'matlab_cmd="'];
-    if ~isempty(opt.matlab.priv.add)
-        batch_script = [batch_script 'addpath(' opt.matlab.priv.add ');'];
-    end
-    if ~isempty(opt.matlab.priv.addsub)
-        batch_script = [batch_script 'addpath(' opt.matlab.priv.addsub ');'];
-    end
-    batch_script = [batch_script ...
-            'load(fullfile(''' opt.server.folder ''',''' fnames '''),''matin'',''matout'');' ...
-            'load(fullfile(''' opt.server.folder ''',matin{$SGE_TASK_ID}),''argin'');' ...
-            'argout=cell(1,' num2str(nargout - 1) ');' ...
-            'func=str2func(''' func ''');' ...
-            '[argout{1:' num2str(nargout - 1) '}]=func(argin{:});' ...
-            'save(fullfile(''' opt.server.folder ''',matout{$SGE_TASK_ID}),''argout'',''-mat'');' ...
-            'quit;' ...
-        '"\n' ...
-        opt.matlab.bin ' ' opt.matlab.opt ' -r $matlab_cmd \n' ... 
-    ];
-    fid = fopen(fullfile(opt.client.folder, mainsh), 'w');
-    fprintf(fid, batch_script);
-    fclose(fid);
-    fileattrib(fullfile(opt.client.folder, mainsh), '+x', 'u');
-
-    % Submit main script
-    % ------------------
-    cmd = '';
-    for i=1:numel(opt.client.source)
-        cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
-    end
-    cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-    for i=1:numel(opt.server.source)
-        cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
-    end
-    cmd = [cmd opt.sched.sub ' '];
-    switch lower(opt.sched.type)
-        case 'sge'
-            cmd = [cmd ' -l vf=' num2str(opt.job.mem{1}) ...
-                       ' -l h_vmem=' num2str(opt.job.mem{1}) ' '];
-        otherwise
-            error('distribute: scheduler %s not implemented yet', opt.sched.type);
-    end
-    cmd = [cmd fullfile(opt.server.folder, mainsh) '"'];
-    [status, result] = system(cmd);
-    if status
-        fprintf([result '\n']);
-        error('distribute: status ~= 0 for main on server!')
-    end
-    
-    s             = regexp(result, '^\D*(?<id>\d+)', 'names'); % ID of array job on server    
-    opt.job.id{1} = s.id;
-        
-    fprintf_job(opt,N);
-        
-    if opt.job.use_dummy
-        % Submit dummy job
-        % ----------
-        cmd = '';
-        for i=1:numel(opt.client.source)
-            cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
-        end
-        cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
-        for i=1:numel(opt.server.source)
-            cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
-        end
-        cmd = [cmd opt.sched.sub ' '];
-        
-        cmd = [cmd ' -l vf=0.1G -l h_vmem=0.1G -hold_jid ' mainname ' -cwd ' fullfile(opt.server.folder,dummy_sh) '"'];
-                
-        [status,result] = system(cmd);
-        if status
-            fprintf([result '\n'])
-            error('status~=0 for dummy job on Holly!') 
-        end
-        
-        s        = regexp(result, '^\D*(?<id>\d+)', 'names'); % ID of array job on server    
-        dummy_id = s.id;
-    end
-    
-    % Track jobs
-    % ----------
-    cmd = '';
-    for i=1:numel(opt.client.source)
-        cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
-    end
-    cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-    for i=1:numel(opt.server.source)
-        cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
-    end
-    cmd = [cmd opt.sched.stat ' '];       
-    if opt.job.use_dummy
-        cmd = [cmd ' | grep ' dummy_id ' '];
-    else
-        switch lower(opt.sched.type)
-            case 'sge'
-                cmd = [cmd ' | grep ' opt.job.id{1} ' '];
-            otherwise
-                error('distribute: scheduler %s not implemented yet', opt.sched.type);
-        end
-    end
-    cmd = [cmd '"'];
-    
-    start_track = tic;
-    while 1
-        pause(10); % Do not refresh too often
-        
-        [~, result] = system(cmd);
-        
-        if isempty(result)            
-            fprintf_job(opt,N,toc(start_track));                            
-            break
-        end
-    end
-    
-    % Store opt
-    %-----------
-    varargout{1} = opt;
-    
-    % Read output
-    % -----------
-    pause(1)
-    % Reverse translation
-    opt.server_to_client = true;
-    % initialise output structure
-    [varargout{2:nargout}] = deal({});
-    j = 2;
-    for i=1:numel(args)
-        if strcmpi(flags{i}, 'inplace')
-            varargout{j} = args{i};
-            j = j + 1;
-        end
-    end
-    % fill output structure
-    for n=1:N
-        % read argout
-        try
-            load(fullfile(opt.client.folder, matout{n}), 'argout');
-            argout = distribute_translate(opt, argout); 
-        catch ME
-            warning('Error reading file %d (%s)\n', ...
-                    n, fullfile(opt.client.folder, matout{n}))
-            for i=1:numel(ME.stack)
-                disp([ME.stack(i).name ', line ' num2str(ME.stack(i).line)]);
-            end
-            disp(ME.message)  
-            continue
-        end
-        % fill inplace
-        j = 2;
-        for i=1:numel(args)
-            if strcmpi(flags{i}, 'inplace')
-                if strcmpi(access{i}, '{}')
-                    varargout{j}{n} = argout{j - 1};
-                elseif strcmpi(access{i}, '()')
-                    varargout{j}(n) = argout{j - 1};
-                end
-                j = j + 1;
-            end
-        end
-        % fill remaining
-        j1 = j;
-        for j=j1:nargout
-            varargout{j}{n} = argout{j - 1};
-        end
-        clear argout
-    end
-    opt.server_to_client = false;
-    
-    % Clean disk
-    % ----------
-    if opt.clean
-        names = [{mainsh mainout mainerr ...
-                 fnames} matin matout];
-        if opt.job.use_dummy
-            names = [names {dummy_sh dummy_out dummy_err}];
-        end
-        for i=1:numel(names)
-            if exist(fullfile(opt.client.folder, names{i}), 'file')
-                delete(fullfile(opt.client.folder, names{i}));
-            end
-        end
-    end
-    
-end
-
-% -------------------------------------------------------------------------
-%   Distribute on server (individual)
-% -------------------------------------------------------------------------
-
-function varargout = distribute_server_ind(opt, func, args, flags, access, N)
-
-    if numel(opt.job.mem) == 1
-        [opt.job.mem{1:N}] = deal(opt.job.mem{1});
-    end
-
-    if opt.job.use_dummy
-        [~,dummy_sh,dummy_out,dummy_err] = create_dummy_job(opt);
-    end
-    
-    mainname = cell(1,N);
-    mainsh   = cell(1,N);
-    mainout  = cell(1,N);
-    mainerr  = cell(1,N);
-    matin    = cell(1,N);
-    matout   = cell(1,N);
-    if exist('java.util.UUID', 'class')
-        uid1 = ''; % General UID
-    else
-        uid1 = datestr(now, 'yyyymmddTHHMMSS');
-    end
-    for n=1:N
-
-        % Filenames
-        % ---------
-        if exist('java.util.UUID', 'class')
-            uid = char(java.util.UUID.randomUUID());
-        else
-            uid = [uid1 '_' num2str(n)];
-        end
-        mainname{n} = ['main_' uid];
-        mainsh{n}   = ['main_' uid '.sh'];        % main bash script
-        mainout{n}  = ['main_cout_' uid '.log'];  % main output file
-        mainerr{n}  = ['main_cerr_' uid '.log'];  % main error file
-        matin{n}    = ['in_' uid '.mat'];
-        matout{n}   = ['out_' uid '.mat'];
-    
-        % Write data
-        % ----------
-        argin = cell(size(args));
-        for i=1:numel(args)
-            switch lower(flags{i})
-                case ''
-                    argin{i} = args{i};
-                case {'iter', 'inplace'}
-                    switch lower(access{i})
-                        case '()'
-                            argin{i} = args{i}(n);
-                        case '{}'
-                            argin{i} = args{i}{n};
-                    end
-            end
-        end
-        argin = distribute_translate(opt, argin);
-        save(fullfile(opt.client.folder, matin{n}), 'argin', '-mat'); 
-        clear argin
-    
-        % Write main script
-        % -----------------
-        % It runs each subject job
-        batch_script = [             ...
-            '#!' opt.sh.bin '\n'     ...
-            '\n'                     ...
-            '#$ -S ' opt.sh.bin '\n' ... % Shell path
-            '#$ -N ' mainname{n} '\n'   ... % Job name
-            '#$ -o ' fullfile(opt.server.folder,mainout{n}) '\n'  ... % Path to output file
-            '#$ -e ' fullfile(opt.server.folder,mainerr{n}) '\n'  ... % Path to error file
-            '#$ -j n \n'                ... % Do not join out/err files
-            '\n'                        ...
-            'matlab_cmd="'];
-        if ~isempty(opt.matlab.priv.add)
-            batch_script = [batch_script 'addpath(' opt.matlab.priv.add ');'];
-        end
-        if ~isempty(opt.matlab.priv.addsub)
-            batch_script = [batch_script 'addpath(' opt.matlab.priv.addsub ');'];
-        end
-        batch_script = [batch_script ...
-                'load(fullfile(''' opt.server.folder ''',''' matin{n} '''),''argin'');' ...
-                'argout=cell(1,' num2str(nargout - 1) ');' ...
-                'func=str2func(''' func ''');' ...
-                '[argout{1:' num2str(nargout - 1) '}]=func(argin{:});' ...
-                'save(fullfile(''' opt.server.folder ''',''' matout{n} '''),''argout'',''-mat'');' ...
-                'quit;' ...
-            '"\n' ...
-            opt.matlab.bin ' ' opt.matlab.opt ' -r $matlab_cmd \n' ... 
-        ];
-        fid = fopen(fullfile(opt.client.folder, mainsh{n}), 'w');
-        fprintf(fid, batch_script);
-        fclose(fid);
-        fileattrib(fullfile(opt.client.folder, mainsh{n}), '+x', 'u');
-
-        % Submit main script
-        % ------------------
-        cmd = '';
-        for i=1:numel(opt.client.source)
-            cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
-        end
-        cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-        for i=1:numel(opt.server.source)
-            cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
-        end
-        cmd = [cmd opt.sched.sub ' '];
-        switch lower(opt.sched.type)
-            case 'sge'
-                cmd = [cmd ' -l vf=' num2str(opt.job.mem{n}) ...
-                           ' -l h_vmem=' num2str(opt.job.mem{n}) ' '];
-            otherwise
-                error('distribute: scheduler %s not implemented yet', opt.sched.type);
-        end
-        cmd = [cmd fullfile(opt.server.folder, mainsh{n}) '"'];
-        [status, result] = system(cmd);
-        if status
-            fprintf([result '\n']);
-            error('distribute: status ~= 0 for job %d on server!', n)
-        end        
-
-        s             = regexp(result, '^\D*(?<id>\d+)', 'names'); % ID of array job on server
-        opt.job.id{n} = s.id;
-    
-    end
-        
-    fprintf_job(opt,N);
-    
-    if opt.job.use_dummy
-        % Submit dummy job
-        % ----------                
-        cmd = '';
-        for i=1:numel(opt.client.source)
-            cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
-        end
-        cmd = [cmd opt.ssh.bin ' ' opt.server.login '@' opt.server.ip ' "'];
-        for i=1:numel(opt.server.source)
-            cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
-        end
-        cmd = [cmd opt.sched.sub ' '];
-        
-        nam = mainname{1};
-        for n=2:N
-            nam = [nam ',' mainname{n}];
-        end
-        
-        cmd = [cmd ' -l vf=0.1G -l h_vmem=0.1G -hold_jid ' nam ' -cwd ' fullfile(opt.server.folder,dummy_sh) '"'];
-                
-        [status,result] = system(cmd);
-        if status
-            fprintf([result '\n'])
-            error('status~=0 for dummy job on Holly!') 
-        end
-        
-        s        = regexp(result, '^\D*(?<id>\d+)', 'names'); % ID of array job on server    
-        dummy_id = s.id;
-    end
-    
-    % Track jobs
-    % ----------    
-    cmd = '';
-    for i=1:numel(opt.client.source)
-        cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
-    end
-    cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-    for i=1:numel(opt.server.source)
-        cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
-    end
-    cmd = [cmd opt.sched.stat ' '];
-    if opt.job.use_dummy
-        cmd = [cmd ' | grep ' dummy_id ' '];
-    else
-        switch lower(opt.sched.type)
-            case 'sge'
-                cmd = [cmd ' | grep '];
-                for n=1:N
-                    cmd = [cmd '-e ' opt.job.id{n} ' '];
-                end
-            otherwise
-                error('distribute: scheduler %s not implemented yet', opt.sched.type);
-        end
-    end
-    cmd = [cmd '"'];
-    
-    start_track = tic;
-    while 1
-        pause(10); % Do not refresh too often
-        
-        [~, result] = system(cmd);
-        
-        if isempty(result)            
-            fprintf_job(opt,N,toc(start_track));           
-            
-            break
-        end
-    end
-    
-    % Store opt
-    %-----------
-    varargout{1} = opt;
-    
-    % Read output
-    % -----------
-    pause(1)
-    % Reverse translation
-    opt.server_to_client = true;
-    % initialise output structure
-    [varargout{2:nargout}] = deal({});
-    j = 2;
-    for i=1:numel(args)
-        if strcmpi(flags{i}, 'inplace')
-            varargout{j} = args{i};
-            j = j + 1;
-        end
-    end
-    % fill output structure
-    for n=1:N
-        % read argout
-        try
-            load(fullfile(opt.client.folder, matout{n}), 'argout');
-            argout = distribute_translate(opt, argout); 
-        catch ME
-            warning('Error reading file %d (%s)\n', ...
-                    n, fullfile(opt.client.folder, matout{n}))
-            for i=1:numel(ME.stack)
-                disp([ME.stack(i).name ', line ' num2str(ME.stack(i).line)]);
-            end
-            disp(ME.message)  
-            continue
-        end
-        % fill inplace
-        j = 2;
-        for i=1:numel(args)
-            if strcmpi(flags{i}, 'inplace')
-                if strcmpi(access{i}, '{}')
-                    varargout{j}{n} = argout{j - 1};
-                elseif strcmpi(access{i}, '()')
-                    varargout{j}(n) = argout{j - 1};
-                end
-                j = j + 1;
-            end
-        end
-        % fill remaining
-        j1 = j;
-        for j=j1:nargout
-            varargout{j}{n} = argout{j - 1};
-        end
-        clear argout
-    end
-    opt.server_to_client = false;
-    
-    % Clean disk
-    % ----------
-    if opt.clean
-        names = [mainsh mainout mainerr matin matout];
-        if opt.job.use_dummy
-            names = [names {dummy_sh dummy_out dummy_err}];
-        end
-        for i=1:numel(names)
-            if exist(fullfile(opt.client.folder, names{i}), 'file')
-                delete(fullfile(opt.client.folder, names{i}));
-            end
-        end
-    end
-    
-end
 
 % -------------------------------------------------------------------------
 %   Estimate memory usage
@@ -788,6 +269,8 @@ end
 function opt = estimate_mem(opt)
     sd = opt.job.sd;
     
+    % ---------------------------------------------------------------------
+    % BATCH MODE
     if opt.job.batch                
         jobid = opt.job.id{1};
         omem  = opt.job.mem{1};
@@ -806,111 +289,87 @@ function opt = estimate_mem(opt)
         [status,result] = system(cmd);   
 
         if status==0
-            jobs = strsplit(result,'G');
-            S    = numel(jobs) - 1; 
-
-            a = zeros(1,S);
-            for s=1:S
-                job  = jobs{s};                      
-                job  = strsplit(job,' '); 
-                a(s) = str2double(job{2});
+            result = regexp(result, 'maxvmem\W+(?<mem>\d+.?\d*)(?<unit>[KMGT]?)', 'names');
+            N = numel(result) - 1;
+            
+            % Convert all in bytes
+            a = zeros(1,N);
+            for n=1:N
+                a(n) = str2double(result(n).mem);
+                switch lower(result(n).unit)
+                    case 'k'
+                        a(n) = a(n) * 1024;
+                    case 'm'
+                        a(n) = a(n) * (1024^2);
+                    case 'g'
+                        a(n) = a(n) * (1024^3);
+                    case 't'
+                        a(n) = a(n) * (1024^4);
+                end
             end
-
-            a   = (1 + sd)*max(a);
+            % Compute maximum value
+            [mx, i] = max(a);
+            a = (1 + sd)*mx;
+            % Use biggest unit
+            units   = {result.unit};
+            mxunit  = units{i(1)};
+            switch lower(mxunit)
+                case 'k'
+                    a = a ./ 1024;
+                case 'm'
+                    a = a ./ (1024^2);
+                case 'g'
+                    a = a ./ (1024^3);
+                case 't'
+                    a = a ./ (1024^4);
+            end
             mem = ceil(a * 10)/10; % Ceil to one decimal place
-
-            opt.job.mem{1} = [num2str(mem) 'G'];  
+            opt.job.mem{1} = [num2str(mem) mxunit];  
         else
             opt.job.mem{1} = omem; 
         end
         
         if opt.verbose
-            fprintf('New memory usage is %s (old memory was %s)\n',opt.job.mem{1},omem);
+            fprintf('New memory usage is %s (old memory was %s)\n',...
+                    opt.job.mem{1},omem);
         end
+        
+        
+    % ---------------------------------------------------------------------
+    % BATCH MODE
     else        
         N = numel(opt.job.id);
+
+        cmd = '';
+        for i=1:numel(opt.client.source)
+            cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
+        end
+        cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
+        for i=1:numel(opt.server.source)
+            cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
+        end
         for n=1:N
             jobid = opt.job.id{n};
-            omem  = opt.job.mem{n};
+            cmd = [cmd opt.sched.acct ' -j ' jobid ' | grep maxvmem ; '];
+        end
+        cmd = [cmd '"'];
 
-            cmd = '';
-            for i=1:numel(opt.client.source)
-                cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
-            end
-            cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-            for i=1:numel(opt.server.source)
-                cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
-            end
-            cmd = [cmd opt.sched.acct ' '];
-            cmd = [cmd ' -j ' num2str(jobid) ' | grep maxvmem"'];
+        [status,result] = system(cmd);   
 
-            [status,result] = system(cmd);   
-
-            if status==0
-                job = strsplit(result,'G');    
-                job = strsplit(job{1},' '); 
-                a   = str2double(job{2});
+        if status==0
+            result = regexp(result, 'maxvmem\W+(?<mem>\d+.?\d*)(?<unit>[KMGT]?)', 'names');
+            for n=1:N
+                omem = opt.job.mem{n};
+                a   = str2double(result(n).mem);
                 a   = (1 + sd)*a;
                 mem = ceil(a * 10)/10; % Ceil to one decimal place
-
-                opt.job.mem{n} = [num2str(mem) 'G']; 
-            else
-                opt.job.mem{n} = omem; 
-            end
+                opt.job.mem{n} = [num2str(mem) result(n).unit]; 
             
-            if opt.verbose
-                fprintf('New memory usage is %s (old memory was %s)\n',...
-                    opt.job.mem{n},omem);
+                if opt.verbose
+                    fprintf('New memory usage is %s (old memory was %s)\n',...
+                            opt.job.mem{n},omem);
+                end
             end
         end
-    end
-end
-
-% -------------------------------------------------------------------------
-%  Create shell script to execute dummy job
-% -------------------------------------------------------------------------
-
-function [nam,sh,out,err] = create_dummy_job(opt)
-    uid = char(java.util.UUID.randomUUID()); 
-    nam = ['dummy_' uid];
-    sh  = ['dummy_' uid '.sh'];        
-    out = ['dummy_cout_' uid '.log'];  
-    err = ['dummy_cerr_' uid '.log']; 
-    
-    bash_script = sprintf(['#!/bin/sh\n'...
-                                 '\n'...
-                                 '#$ -S /bin/sh\n'...
-                                 '#$ -N ' nam '\n'...
-                                 '#$ -o ' fullfile(opt.server.folder,out) '\n'...
-                                 '#$ -e ' fullfile(opt.server.folder,err) '\n'...
-                                 '#$ -j n \n'...
-                                 '#$ -t 1-1 \n'...
-                                 '\n'...
-                                 'echo dummy\n']);
-                             
-    pth = fullfile(opt.client.folder,sh);
-    
-    fid = fopen(pth,'w');
-    fprintf(fid,bash_script);
-    fclose(fid);
-
-    fileattrib(pth,'+x','u')
-end
-
-% -------------------------------------------------------------------------
-%   Print stuff
-% -------------------------------------------------------------------------
-
-function fprintf_job(opt,N,t)            
-    date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
-    if nargin<3        
-        fprintf('\n----------------------------------------------\n')
-        if opt.job.batch
-            fprintf('%s | Batch job submitted to cluster (N = %i)\n',date,N)
-        else
-            fprintf('%s | Individual jobs submitted to cluster (N = %i)\n',date,N)
-        end
-    else
-        fprintf('%s | Cluster processing finished (%.1f seconds)\n',date,t)
     end
 end
