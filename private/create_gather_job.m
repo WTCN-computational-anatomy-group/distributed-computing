@@ -24,7 +24,7 @@ function [sh,end_job] = create_gather_job(opt, client_dir, server_dir)
     % ---------------------------------------------------------------------
     % Finished file
     bash_script = [bash_script ...
-        'touch ' fullfile(server_dir, endjob) '\n'];               
+        'touch ' fullfile(server_dir, end_job) '\n'];               
     
     % ---------------------------------------------------------------------
     % Write on disk
