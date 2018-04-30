@@ -17,29 +17,35 @@ function varargout = uihelper(id, varargin)
 
 end
 
-function start = batch_begin
+function start = batch_begin(total)
+    n    = floor(log10(total)) + 1;
+    s    = repmat(' ',1,n - 1);
+    s    = [s '0 of ' num2str(total) ' finished'];
     date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
-    fprintf('%s | ', date);
+    fprintf(1,'%s | %s',date,s);
     start = tic;
 end
 
-function batch_incr(cur, prev, total, points)
+function batch_incr(cur,total)
 % cur    - Current number of processed subjects
-% prev   - Previous number of processed subjects
 % total  - Total number of subjects
-% points - Maximum number of plotted points [50]
 
-    prev_points = floor((prev/total)*points);
-    cur_points  = floor((cur/total)*points);
-    step  = cur_points - prev_points;
-    fprintf(repmat('.', 1, step));
+    n = floor(log10(total)) + 1;
+    d = floor(log10(total)) - floor(log10(max(cur,1)));
+    
+    s = repmat('\b',1,n + (n - 1) + 14);
+    s = [s repmat(' ',1,d)];
+    s = [s num2str(cur)];
+    s = [s ' of ' num2str(total) ' finished'];
+    
+    fprintf(1,s);
 end
 
 
 function batch_end(total, start)
     dur = sec2ydhms(toc(start));
     date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
-    fprintf(' |\n');
+    fprintf(' \n');
     fprintf([sprintf('%s | %d jobs processes in ', date, total) dur '\n']);
 end
 
