@@ -24,8 +24,7 @@ function track_jobs(client_dir, main_end, gather_end, verbose)
         
         % Track gathering job
         if use_gather
-            if nb_finished == N && ...
-               exist(fullfile(client_dir, gather_end{i}), 'file')                            
+            if exist(fullfile(client_dir, gather_end{i}), 'file')                            
                 break
             end
         elseif nb_finished == N
