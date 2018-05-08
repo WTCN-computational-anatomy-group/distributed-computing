@@ -31,7 +31,7 @@ function varargout = distribute_server_batch(opt, func, args, flags, access, N)
     % Submit main script
     % ------------------
     opt.job.id = submit_main_job(opt, server_dir, main_sh);
-        
+    
     gather_end = '';
     if opt.job.use_dummy
         
