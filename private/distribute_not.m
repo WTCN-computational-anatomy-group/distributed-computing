@@ -1,4 +1,4 @@
-function varargout = distribute_not(~, func, args, flags, access, N)
+function varargout = distribute_not(opt, func, args, flags, access, N)
 % -------------------------------------------------------------------------
 %   Do not distribute
 % -------------------------------------------------------------------------
@@ -6,6 +6,10 @@ function varargout = distribute_not(~, func, args, flags, access, N)
     % Prepare temporary output
     % ------------------------
     out = cell(N, nargout);
+    
+    if opt.verbose
+        start_track = uihelper('begin',N);
+    end
     
     % Iterate
     % -------
@@ -25,6 +29,9 @@ function varargout = distribute_not(~, func, args, flags, access, N)
             end
         end
         [out{n,:}] = func(args1{:});
+        if opt.verbose
+            uihelper('incr', n, N);
+        end
     end
 
     % Write final output
@@ -49,5 +56,9 @@ function varargout = distribute_not(~, func, args, flags, access, N)
     j1 = j;
     for j=j1:nargout
         varargout{j} = out{:,j}';
+    end
+    
+    if opt.verbose
+        uihelper('end', N, start_track);
     end
 end

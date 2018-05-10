@@ -10,6 +10,10 @@ function varargout = distribute_local(opt, func, args, flags, access, N)
     Nout = nargout;
     out  = cell(N, Nout);
     
+    if opt.verbose
+        start_track = uihelper('begin',N);
+    end
+    
     % Iterate
     % -------
     % /!\ no efficient slicing
@@ -55,5 +59,9 @@ function varargout = distribute_local(opt, func, args, flags, access, N)
     j1 = j;
     for j=j1:nargout
         varargout{j} = out{:,j}';
+    end
+    
+    if opt.verbose
+        uihelper('end', N, start_track);
     end
 end
