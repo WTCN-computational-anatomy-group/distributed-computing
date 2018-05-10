@@ -76,6 +76,11 @@ function varargout = distribute(opt, func, varargin)
 % >> end
 % _________________________________________________________________________
 
+    if isempty(opt)
+        opt = struct;
+        opt = distribute_default(opt);
+    end
+
     % Parse input
     % -----------
     args  = {};
@@ -130,13 +135,13 @@ function varargout = distribute(opt, func, varargin)
         
         if opt.job.est_mem
             % Estimate new memory usage
-            % ----------
+            % -------------------------
             opt = estimate_mem(opt);            
         end
-    elseif double(opt.client.workers) > 0
-        [varargout{2:nargout}] = distribute_local(opt, func, args, flags, access, N);
-    else
+    elseif double(opt.client.workers) == 0 || strcmpi(opt.mode, 'for')
         [varargout{2:nargout}] = distribute_not(opt, func, args, flags, access, N);
+    else
+        [varargout{2:nargout}] = distribute_local(opt, func, args, flags, access, N);
     end
 
     varargout{1} = opt;    
