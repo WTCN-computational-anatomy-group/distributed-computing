@@ -9,6 +9,11 @@ function opt = distribute_default(opt)
 %
 % opt is a structure with optional fields:
 %
+% GENERAL
+% -------
+% mode    - Parallelisation mode: 'qsub'/'parfor'/['for']
+% verbose - Speak during processing [false]
+%
 % CLUSTER
 % -------
 % server.ip     - IP adress (or alias name) of the cluster ['' = no cluster]
@@ -64,6 +69,10 @@ function opt = distribute_default(opt)
         opt = struct;
     end
 
+    if ~isfield(opt, 'mode')
+        opt.mode = 'for';
+    end
+    
     % CLUSTER
     % -------
     if ~isfield(opt, 'server')
@@ -98,9 +107,13 @@ function opt = distribute_default(opt)
         opt.client.source = {opt.client.source};
     end
     if ~isfield(opt.client, 'workers')
-        myCluster          = parcluster;
-        opt.client.workers = myCluster.NumWorkers;
-        clear myCluster
+        if strcmpi(opt.mode, 'parfor')
+            myCluster          = parcluster;
+            opt.client.workers = myCluster.NumWorkers;
+            clear myCluster
+        else
+            opt.client.workers = 0;
+        end
     end
     if ~isfield(opt.client, 'folder')
         opt.client.folder = opt.server.folder;
@@ -241,7 +254,7 @@ function opt = distribute_default(opt)
         opt.clean_init = false;
     end
     if ~isfield(opt, 'verbose')
-        opt.verbose = true;
+        opt.verbose = false;
     end
 
     % BUILD ADDPATH STRING

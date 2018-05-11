@@ -18,11 +18,10 @@ function varargout = uihelper(id, varargin)
 end
 
 function start = batch_begin(total)
+    fprintf(1, '%s | ', datestr(now,'mmmm dd, yyyy HH:MM:SS'))
     n    = floor(log10(total)) + 1;
-    s    = repmat(' ',1,n - 1);
-    s    = [s '0 of ' num2str(total) ' finished'];
-    date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
-    fprintf(1,'%s | %s',date,s);
+    s    = sprintf(['%' num2str(n) 'd of %' num2str(n) 'd jobs processed'], 0, total);
+    fprintf(1, ['%-' num2str(2*n + 20) 's'], s);
     start = tic;
 end
 
@@ -31,22 +30,18 @@ function batch_incr(cur,total)
 % total  - Total number of subjects
 
     n = floor(log10(total)) + 1;
-    d = floor(log10(total)) - floor(log10(max(cur,1)));
-    
-    s = repmat('\b',1,n + (n - 1) + 14);
-    s = [s repmat(' ',1,d)];
-    s = [s num2str(cur)];
-    s = [s ' of ' num2str(total) ' finished'];
-    
-    fprintf(1,s);
+    fprintf(1, repmat('\b',1,2*n + 20));
+    s = sprintf(['%' num2str(n) 'd of %' num2str(n) 'd jobs processed'], cur, total);
+    fprintf(1, ['%-' num2str(2*n + 20) 's'], s);
 end
 
 
 function batch_end(total, start)
-    dur = sec2ydhms(toc(start));
-    date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
-    fprintf(' \n');
-    fprintf([sprintf('%s | %d jobs processes in ', date, total) dur '\n']);
+    n = floor(log10(total)) + 1;
+    dur = sec2ydhms(toc(start), true);
+    fprintf(1, repmat('\b',1,2*n + 20));
+    s = sprintf(['%' num2str(n) 'd of %' num2str(n) 'd jobs processed in %s'], total, total, dur);
+    fprintf(['%-' num2str(2*n + 20) 's\n'], s);
 end
 
 function submitted(N, batch)            
@@ -59,13 +54,26 @@ function submitted(N, batch)
 end
 
 function pulled(dur)
-    dur = sec2ydhms(dur);
+    dur = sec2ydhms(dur, true);
     date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
     fprintf([sprintf('%s | Data pulled in ', date) dur '\n']);
 end
 
-function str_end_2 = sec2ydhms(time)
+function str_end_2 = sec2ydhms(time, compact)
+% FORMAT  str = sec2ydhms(duration, compact)
+% duration - duration in seconds
+% compact  - Use compact format [false]
+%
+% Convert a duration in seconds (obtained from tic/toc) to a character
+% representation in terms of years, dat, hour, minute, seconds.
+%
+% Default representation: 3 hours, 15 minutes, 1 second
+% Compact representation: 3h 15m 1s
 
+    if nargin < 2
+        compact = false;
+    end
+    
     dur = duration(0,0,time);
     elapsed = floor(years(dur));
     dur = dur - years(elapsed(end));
@@ -76,21 +84,27 @@ function str_end_2 = sec2ydhms(time)
     elapsed = [elapsed floor(minutes(dur))];
     dur = dur - minutes(elapsed(end));
     elapsed = [elapsed floor(seconds(dur))];
-    units   = {'year' 'day' 'hour' 'minute' 'second'};
+    if compact
+        units = {'y' 'd' 'h' 'm' 's'};
+        space = '';
+    else
+        units = {'year' 'day' 'hour' 'minute' 'second'};
+        space = ' ';
+    end
     str_end_2 = '';
     for i=1:numel(elapsed)
         if elapsed(i) > 0
-            str_end_2 = [str_end_2 sprintf('%d %s', elapsed(i), units{i})];
-            if elapsed(i) > 1
+            str_end_2 = [str_end_2 sprintf('%d%s%s', elapsed(i), space, units{i})];
+            if ~compact && elapsed(i) > 1
                 str_end_2 = [str_end_2 's'];
             end
-            if sum(elapsed(i+1:end)) > 0
+            if ~compact && sum(elapsed(i+1:end)) > 0
                 str_end_2 = [str_end_2 ', '];
             end
         end
     end
     if sum(elapsed) == 0
-        str_end_2 = [str_end_2 '< 0 second'];
+        str_end_2 = [str_end_2 sprintf('< 0%s%s', space, units{5})];
     end
 
 end

@@ -20,7 +20,9 @@ dist.spm.toolboxes  = {'Shoot'};
 
 dist.translate      = {'/Users/balbasty/Desktop/FIL/data' '/data/ybalba'};
 dist.restrict       = 'file_array';
-dist.clean          = false;
+dist.clean          = true;
+
+dist.job.batch = true;
 
 dist = distribute_default(dist);
 
@@ -28,7 +30,9 @@ dist = distribute_default(dist);
 %  Test 1
 %  ------
 
-t = {60 60 60 60 60};
+% t = {60 60 60 60 60};
+t = num2cell(10:10:100);
+% t = {1 1 1 1 1};
 [dist,foo] = distribute(dist, @pause, 'iter', t);
 
 %% ------
