@@ -124,7 +124,7 @@ function varargout = distribute(opt, func, varargin)
     
     % Distribute
     % ----------
-    if opt.server.setup && check_server_load(opt)
+    if strcmpi(opt.mode, 'qsub') && opt.server.setup && check_server_load(opt)
         if opt.job.batch
             [varargout{1:nargout}] = distribute_server_batch(opt, funcstr, args, flags, access, N);
         else
