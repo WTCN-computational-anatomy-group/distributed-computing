@@ -133,10 +133,10 @@ function varargout = distribute(opt, func, varargin)
         
         opt = varargout{1};
         
-        if opt.job.est_mem
+        if opt.job.est_mem || opt.verbose
             % Estimate new memory usage
             % -------------------------
-            opt = estimate_mem(opt);            
+            opt = estimate_mem(opt);
         end
     elseif double(opt.client.workers) == 0 || strcmpi(opt.mode, 'for')
         [varargout{2:nargout}] = distribute_not(opt, func, args, flags, access, N);
