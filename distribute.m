@@ -1,4 +1,4 @@
-function varargout = distribute(opt, func, varargin)
+function varargout = distribute(varargin)
 % _________________________________________________________________________
 %
 %             Distribute Matlab jobs locally or on a cluster
@@ -20,7 +20,11 @@ function varargout = distribute(opt, func, varargin)
 %        unless some arguments were 'inplace'. In this case, the
 %        function should return inplace arguments first, in the same
 %        order as their input order.
-% 
+%
+% LOCAL MODE
+% ----------
+% FORMAT [out1, ...] = distribute(func, ('iter'/'inplace'), arg1, ...)
+%
 % -------------------------------------------------------------------------
 % CONFIGURATION
 % -------------
@@ -76,6 +80,17 @@ function varargout = distribute(opt, func, varargin)
 % >> end
 % _________________________________________________________________________
 
+    if ~isstruct(varargin{1})
+        opt  = [];
+        func = varargin{1};
+        varargin  = varargin(2:end);
+        no_option = true;
+    else
+        opt  = varargin{1};
+        func = varargin{2};
+        varargin  = varargin(3:end);
+        no_option = false;
+    end
     if isempty(opt)
         opt = struct;
         opt = distribute_default(opt);
@@ -144,7 +159,11 @@ function varargout = distribute(opt, func, varargin)
         [varargout{2:nargout}] = distribute_local(opt, func, args, flags, access, N);
     end
 
-    varargout{1} = opt;    
+    % Output option structure
+    % -----------------------
+    if no_option,   varargout    = varargout{2:end};
+    else,           varargout{1} = opt;    
+    end
 end
 
 function ok = check_server_load(~)
