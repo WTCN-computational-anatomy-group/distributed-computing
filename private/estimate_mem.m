@@ -60,12 +60,17 @@ function opt = estimate_mem(opt)
                     a = a ./ (1024^4);
             end
             mem = ceil(a * 10)/10; % Ceil to one decimal place
-            opt.job.mem{1} = [num2str(mem) mxunit];  
+            
+            if opt.job.est_mem
+                opt.job.mem{1} = [num2str(mem) mxunit];  
+            end
         else
             opt.job.mem{1} = omem; 
         end
-        
-        if opt.verbose
+
+        if opt.verbose && ~opt.job.est_mem
+            fprintf('Memory usage is %s\n',mem);
+        elseif opt.verbose
             fprintf('New memory usage is %s (old memory was %s)\n',...
                     opt.job.mem{1},omem);
         end
@@ -99,12 +104,17 @@ function opt = estimate_mem(opt)
                 a   = str2double(result(n).mem);
                 a   = (1 + sd)*a;
                 mem = ceil(a * 10)/10; % Ceil to one decimal place
-                opt.job.mem{n} = [num2str(mem) result(n).unit]; 
-            
-                if opt.verbose
-                    fprintf('New memory usage is %s (old memory was %s)\n',...
+                
+                if opt.job.est_mem
+                    opt.job.mem{n} = [num2str(mem) result(n).unit]; 
+                    
+                    if opt.verbose
+                        fprintf('New memory usage is %s (old memory was %s)\n',...
                             opt.job.mem{n},omem);
-                end
+                    end
+                else
+                    fprintf('Memory usage is %s\n',mem);
+                end            
             end
         end
     end

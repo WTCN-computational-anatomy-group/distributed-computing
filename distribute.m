@@ -139,7 +139,7 @@ function varargout = distribute(varargin)
     
     % Distribute
     % ----------
-    if opt.server.setup && check_server_load(opt)
+    if strcmpi(opt.mode, 'qsub') && opt.server.setup && check_server_load(opt)
         if opt.job.batch
             [varargout{1:nargout}] = distribute_server_batch(opt, funcstr, args, flags, access, N);
         else
@@ -148,10 +148,10 @@ function varargout = distribute(varargin)
         
         opt = varargout{1};
         
-        if opt.job.est_mem
+        if opt.job.est_mem || opt.verbose
             % Estimate new memory usage
             % -------------------------
-            opt = estimate_mem(opt);            
+            opt = estimate_mem(opt);
         end
     elseif double(opt.client.workers) == 0 || strcmpi(opt.mode, 'for')
         [varargout{2:nargout}] = distribute_not(opt, func, args, flags, access, N);

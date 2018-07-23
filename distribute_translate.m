@@ -58,7 +58,10 @@ function obj = translate(opt, obj)
         return
     end
     if isa(obj, 'nifti')
-        obj.dat = translate(opt, obj.dat);
+        N = numel(obj);
+        for n=1:N
+            obj(n).dat = translate(opt, obj(n).dat);
+        end
         return
     end
     if isstruct(obj)
