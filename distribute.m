@@ -85,11 +85,13 @@ function varargout = distribute(varargin)
         func = varargin{1};
         varargin  = varargin(2:end);
         no_option = true;
+        varargout = cell(1,nargout+1);
     else
         opt  = varargin{1};
         func = varargin{2};
         varargin  = varargin(3:end);
         no_option = false;
+        varargout = cell(1,nargout);
     end
     if isempty(opt)
         opt = struct;
@@ -141,9 +143,9 @@ function varargout = distribute(varargin)
     % ----------
     if strcmpi(opt.mode, 'qsub') && opt.server.setup && check_server_load(opt)
         if opt.job.batch
-            [varargout{1:nargout}] = distribute_server_batch(opt, funcstr, args, flags, access, N);
+            [varargout{1:numel(varargout)}] = distribute_server_batch(opt, funcstr, args, flags, access, N);
         else
-            [varargout{1:nargout}] = distribute_server_ind(opt, funcstr, args, flags, access, N);
+            [varargout{1:numel(varargout)}] = distribute_server_ind(opt, funcstr, args, flags, access, N);
         end
         
         opt = varargout{1};
@@ -154,14 +156,14 @@ function varargout = distribute(varargin)
             opt = estimate_mem(opt);
         end
     elseif double(opt.client.workers) == 0 || strcmpi(opt.mode, 'for')
-        [varargout{2:nargout}] = distribute_not(opt, func, args, flags, access, N);
+        [varargout{2:numel(varargout)}] = distribute_not(opt, func, args, flags, access, N);
     else
-        [varargout{2:nargout}] = distribute_local(opt, func, args, flags, access, N);
+        [varargout{2:numel(varargout)}] = distribute_local(opt, func, args, flags, access, N);
     end
 
     % Output option structure
     % -----------------------
-    if no_option,   varargout    = varargout{2:end};
+    if no_option,   varargout    = varargout(2:end);
     else,           varargout{1} = opt;    
     end
 end

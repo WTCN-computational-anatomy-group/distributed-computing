@@ -72,6 +72,9 @@ function opt = distribute_default(opt)
     if ~isfield(opt, 'mode')
         opt.mode = 'for';
     end
+    if ~isfield(opt, 'verbose')
+        opt.verbose = false;
+    end
     
     % CLUSTER
     % -------
@@ -119,6 +122,12 @@ function opt = distribute_default(opt)
         opt.client.folder = opt.server.folder;
     end
 
+    
+    % IF LOCAL MODE: NO NEED TO CONTINUE
+    % ----------------------------------
+    if any(strcmpi(opt.mode, {'for','parfor'}))
+        return
+    end
 
     % SUBMIT JOBS
     % -----------
@@ -253,10 +262,7 @@ function opt = distribute_default(opt)
     if ~isfield(opt, 'clean_init')
         opt.clean_init = false;
     end
-    if ~isfield(opt, 'verbose')
-        opt.verbose = false;
-    end
-
+    
     % BUILD ADDPATH STRING
     % --------------------
     opt.matlab.priv.add = '';
