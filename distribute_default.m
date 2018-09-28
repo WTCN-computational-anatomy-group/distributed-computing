@@ -323,7 +323,7 @@ function varargout = auto_detect(id, varargin)
 end
 
 function ok = sshexist(opt, file)
-    st = system(sshcall(opt, ['find ''' file '''']));
+    st = system(sshcall(opt, ['find ''' file ''''], true));
     ok = (st == 0);
 end
 
@@ -334,7 +334,7 @@ function path = sshpath(opt)
 end
 
 function ok = sshcommandst(opt, cmd)
-    st = system(sshcall(opt, cmd));
+    st = system(sshcall(opt, cmd, true));
     ok = (st == 0);
 end
 
