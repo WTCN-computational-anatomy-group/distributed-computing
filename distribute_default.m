@@ -98,11 +98,13 @@ function opt = distribute_default(opt)
         opt.client.source = {};
         if isunix
             if exist('~/.bash_profile', 'file')
-                opt.client.source = {'~/.bash_profile'};
-            elseif exist('~/.bashrc', 'file')
-                opt.client.source = {'~/.bashrc'};
-            elseif exist('/etc/profile', 'file')
-                opt.client.source = {'/etc/profile'};
+                opt.client.source = [opt.client.source {'~/.bash_profile'}];
+            end
+            if exist('~/.bashrc', 'file')
+                opt.client.source = [opt.client.source {'~/.bashrc'}];
+            end
+            if exist('/etc/profile', 'file')
+                opt.client.source = [opt.client.source {'/etc/profile'}];
             end
         end
     end
@@ -433,15 +435,17 @@ end
 %   source
 % -------------------------------------------------------------------------
 
-function path = auto_detect_source(opt)
+function path = auto_detect_source(~)
     path = {};
     if isunix
-        if sshexist(opt, '~/.bash_profile')
-            path = {'~/.bash_profile'};
-        elseif sshexist(opt, '~/.bashrc')
-            path = {'~/.bashrc'};
-        elseif sshexist(opt, '/etc/profile')
-            path = {'/etc/profile'};
+        if exist('~/.bash_profile', 'file')
+            path = [path {'~/.bash_profile'}];
+        end
+        if exist('~/.bashrc', 'file')
+            path = [path {'~/.bashrc'}];
+        end
+        if exist('/etc/profile', 'file')
+            path = [path {'/etc/profile'}];
         end
     end
 
