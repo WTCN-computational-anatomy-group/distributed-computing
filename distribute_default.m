@@ -78,13 +78,13 @@ function opt = distribute_default(opt)
     
     % CLUSTER
     % -------
+    opt.server.setup = true;
     if ~isfield(opt, 'server')
         opt.server = struct;
     end
     if ~isfield(opt.server, 'ip')
         opt.server.ip = '';
     end
-    opt.server.setup = ~isempty(opt.server.ip);
     if ~isfield(opt.server, 'login')
         opt.server.login = '';
     end
@@ -148,6 +148,7 @@ function opt = distribute_default(opt)
     end
     if isempty(opt.ssh.bin) && ~isempty(opt.server.ip)
         warning('Could not find an ssh binary')
+        opt.server.setup = false;
     end
     if ~isfield(opt.ssh, 'opt')
         if strcmpi(opt.ssh.type, 'ssh')
@@ -170,6 +171,9 @@ function opt = distribute_default(opt)
             || ~isfield(opt.sched, 'stat') ...
             || ~isfield(opt.sched, 'acct')
         [opt.sched.sub, opt.sched.stat, opt.sched.acct] = auto_detect('sched', opt);
+        if isempty(opt.sched.sub)
+            opt.server.setup = false;
+        end
     end
     if ~isfield(opt.sched, 'type')
         opt.sched.type = auto_detect('sched', 'type', opt.sched.sub, opt);
@@ -218,6 +222,9 @@ function opt = distribute_default(opt)
     end
     if ~isfield(opt.matlab, 'bin')
         opt.matlab.bin = auto_detect('matlab', opt);
+        if isempty(opt.matlab.bin)
+            opt.server.setup = false;
+        end
     end
     if ~isfield(opt.matlab, 'add')
         opt.matlab.add = {};
