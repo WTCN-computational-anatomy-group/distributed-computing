@@ -24,6 +24,7 @@ function varargout = distribute(varargin)
 % LOCAL MODE
 % ----------
 % FORMAT [out1, ...] = distribute(func, ('iter'/'inplace'), arg1, ...)
+% FORMAT [out1, ...] = distribute(nworkers, func, ('iter'/'inplace'), arg1, ...)
 %
 % -------------------------------------------------------------------------
 % CONFIGURATION
@@ -83,7 +84,16 @@ function varargout = distribute(varargin)
 % >> end
 % _________________________________________________________________________
 
-    if ~isstruct(varargin{1})
+    if isnumeric(varargin{1}) && isscalar(varargin{1})
+        opt = struct;
+        opt.client.workers = varargin{1};
+        opt.mode = 'parfor';
+        opt = distribute_default(opt);
+        func = varargin{2};
+        varargin  = varargin(3:end);
+        no_option = true;
+        varargout = cell(1,nargout+1);
+    elseif ~isstruct(varargin{1})
         opt  = [];
         func = varargin{1};
         varargin  = varargin(2:end);
