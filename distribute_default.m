@@ -339,7 +339,7 @@ function ok = sshcommandst(opt, cmd)
 end
 
 function path = sshwhich(opt, bin)
-    [st, path] = system(sshcall(opt, ['which ' bin '"']));
+    [st, path] = system(sshcall(opt, ['which ' bin]));
     if st
         path = '';
     else
