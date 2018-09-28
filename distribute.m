@@ -48,8 +48,11 @@ function varargout = distribute(varargin)
 % EXAMPLE 1)
 % ----------
 %
-% Let 'a' and 'b' be lists (cell array) of numeric arrays. We want to
-% compute all sums a{i} + b{i}. We would call:
+% Let 'a' and 'b' be lists (cell array) of numeric arrays:
+% >> a = num2cell(rand(5,5,10),[1 2]);
+% >> b = num2cell(rand(5,5,10),[1 2]);
+%
+% We want to compute all sums a{i} + b{i}. We would call:
 % >> [opt,c] = distribute(opt, 'plus', 'iter', a, 'iter', b);
 %
 % It will perform the equivalent of:
