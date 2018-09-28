@@ -487,10 +487,6 @@ function varargout = auto_detect_sched(varargin)
         sub = varargin{2};
         opt = varargin{3};
         type = '';
-        if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-            varargout{1} = type;
-            return
-        end
         if contains(sub, 'gridengine')
             type = 'sge';
         elseif sshcommandst(opt, 'man qsub | grep -i ''pbs''')
