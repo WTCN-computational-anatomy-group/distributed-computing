@@ -1,6 +1,6 @@
-function call = sshcall(opt, cmd, show)
+function call = sshcall(opt, cmd, hide)
     if nargin < 3
-        show = false;
+        hide = false;
     end
     call = [];
     for i=1:numel(opt.client.source)
@@ -16,7 +16,7 @@ function call = sshcall(opt, cmd, show)
     if ~isempty(opt.server.ip)
         call = [call '"'];
     end
-    if ~show
+    if hide
         call = [call ' >/dev/null 2>&1'];
     end
 end

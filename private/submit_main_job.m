@@ -30,7 +30,7 @@ function id = submit_main_job(opt, server_dir, sh)
     
     % ---------------------------------------------------------------------
     % Call command
-    [status, result] = system(sshcall(opt, cmd, true));
+    [status, result] = system(sshcall(opt, cmd));
     if status
         fprintf([result '\n']);
         error('distribute: status ~= 0 for main on server!')

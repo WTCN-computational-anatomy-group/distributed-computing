@@ -10,7 +10,7 @@ function id = submit_gather_job(opt, server_dir, sh, dependency)
 
     % ---------------------------------------------------------------------
     % Call command
-    [status,result] = system(sshcall(opt, cmd, true));
+    [status,result] = system(sshcall(opt, cmd));
     if status
         fprintf([result '\n'])
         error('status~=0 for gathering job on server!') 
