@@ -16,7 +16,7 @@ function opt = distribute_default(opt)
 %
 % CLUSTER
 % -------
-% server.ip     - IP adress (or alias name) of the cluster ['' = no cluster]
+% server.ip     - IP adress (or alias name) of the cluster ['' = cluster == client]
 % server.login  - Login with which to connect ['']
 % server.source - Files to source on server side [auto]
 %                 > Try to find bashrc and/or bash_profile
@@ -323,51 +323,23 @@ function varargout = auto_detect(id, varargin)
 end
 
 function ok = sshexist(opt, file)
-    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-    if isfield(opt.server, 'source')
-        for i=1:numel(opt.server.source)
-            call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
-        end
-    end
-    call = [call 'find ''' file '''" >/dev/null 2>&1'];
-    st = system(call);
+    st = system(sshcall(opt, ['find ''' file '''']));
     ok = (st == 0);
 end
 
 function path = sshpath(opt)
-    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-    if isfield(opt.server, 'source')
-        for i=1:numel(opt.server.source)
-            call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
-        end
-    end
-    call = [call 'echo \$PATH"'];
-    [~, path] = system(call);
+    [~, path] = system(sshcall(opt, 'echo \$PATH"'));
     path = split(deblank(path), newline);
     path = split(path{end}, ':');
 end
 
 function ok = sshcommandst(opt, cmd)
-    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-    if isfield(opt.server, 'source')
-        for i=1:numel(opt.server.source)
-            call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
-        end
-    end
-    call = [call cmd '" >/dev/null 2>&1'];
-    st = system(call);
+    st = system(sshcall(opt, cmd));
     ok = (st == 0);
 end
 
 function path = sshwhich(opt, bin)
-    call = [opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-    if isfield(opt.server, 'source')
-        for i=1:numel(opt.server.source)
-            call = [call 'source ' opt.server.source{i} ' >/dev/null 2>&1; '];
-        end
-    end
-    call = [call 'which ' bin '"'];
-    [st, path] = system(call);
+    [st, path] = system(sshcall(opt, ['which ' bin '"']));
     if st
         path = '';
     else
@@ -455,11 +427,6 @@ end
 % -------------------------------------------------------------------------
 
 function path = auto_detect_source(opt)
-    if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-        path = '';
-        return
-    end
-
     path = {};
     if isunix
         if sshexist(opt, '~/.bash_profile')
@@ -482,12 +449,6 @@ function varargout = auto_detect_sched(varargin)
     if nargin == 1
         % find sub/stat/acct
         opt = varargin{1};
-        if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-            varargout{1} = '';
-            varargout{2} = '';
-            varargout{3} = '';
-            return
-        end
         sub  = sshwhich(opt, 'qsub');
         stat = sshwhich(opt, 'qstat');
         acct = sshwhich(opt, 'qacct');
@@ -543,11 +504,6 @@ end
 % -------------------------------------------------------------------------
 
 function bin = auto_detect_matlab(opt)
-    if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-        bin = '';
-        return
-    end
-
     bin = '';
     path = sshpath(opt);
     for i=1:numel(path)
@@ -564,10 +520,6 @@ end
 % -------------------------------------------------------------------------
 
 function path = auto_detect_spm(opt)
-    if isempty(opt.server.ip) || isempty(opt.ssh.bin)
-        path = '';
-        return
-    end
     path = '';
 end
 
