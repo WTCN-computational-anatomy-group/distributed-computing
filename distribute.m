@@ -152,9 +152,18 @@ function varargout = distribute(varargin)
         funcstr = func2str(func);
     end
     
+    
     % Distribute
     % ----------
     if strcmpi(opt.mode, 'qsub') && opt.server.setup && check_server_load(opt)
+         
+        if ~iscell(opt.job.mem)
+            opt.job.mem = {opt.job.mem};
+        end
+        if ~opt.job.batch && numel(opt.job.mem) < N
+            opt.job.mem = padarray(opt.job.mem, [0 N-numel(opt.job.mem)], 'replicate', 'post');
+        end
+        
         if opt.job.batch
             [varargout{1:numel(varargout)}] = distribute_server_batch(opt, funcstr, args, flags, access, N);
         else
@@ -164,7 +173,7 @@ function varargout = distribute(varargin)
         opt = varargout{1};
         
         if opt.job.est_mem || opt.verbose
-            % Estimate new memory usage
+            % Estimate new memory usage (or just output memory usage)
             % -------------------------
             opt = estimate_mem(opt);
         end
