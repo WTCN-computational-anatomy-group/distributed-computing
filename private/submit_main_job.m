@@ -16,13 +16,6 @@ function id = submit_main_job(opt, server_dir, sh)
     % ---------------------------------------------------------------------
     % Build command
     cmd = '';
-    for i=1:numel(opt.client.source)
-        cmd = [cmd 'source ' opt.client.source{i} ' >/dev/null 2>&1 ; '];
-    end
-    cmd = [cmd opt.ssh.bin ' ' opt.ssh.opt ' ' opt.server.login '@' opt.server.ip ' "'];
-    for i=1:numel(opt.server.source)
-        cmd = [cmd 'source ' opt.server.source{i} ' >/dev/null 2>&1 ; '];
-    end
     for i=1:numel(sh)
         cmd = [cmd opt.sched.sub ' '];
         switch lower(opt.sched.type)
@@ -34,11 +27,10 @@ function id = submit_main_job(opt, server_dir, sh)
         end
         cmd = [cmd fullfile(server_dir, sh{i}) ' ; '];
     end
-    cmd = [cmd '"'];
     
     % ---------------------------------------------------------------------
     % Call command
-    [status, result] = system(cmd);
+    [status, result] = system(sshcall(opt, cmd));
     if status
         fprintf([result '\n']);
         error('distribute: status ~= 0 for main on server!')

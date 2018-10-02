@@ -58,7 +58,7 @@ function varargout = distribute_local(opt, func, args, flags, access, N)
     end
     j1 = j;
     for j=j1:nargout
-        varargout{j} = out{:,j}';
+        varargout{j} = out(:,j)';
     end
     
     if opt.verbose

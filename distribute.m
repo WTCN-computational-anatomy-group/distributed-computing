@@ -1,4 +1,4 @@
-function varargout = distribute(opt, func, varargin)
+function varargout = distribute(varargin)
 % _________________________________________________________________________
 %
 %             Distribute Matlab jobs locally or on a cluster
@@ -20,7 +20,12 @@ function varargout = distribute(opt, func, varargin)
 %        unless some arguments were 'inplace'. In this case, the
 %        function should return inplace arguments first, in the same
 %        order as their input order.
-% 
+%
+% LOCAL MODE
+% ----------
+% FORMAT [out1, ...] = distribute(func, ('iter'/'inplace'), arg1, ...)
+% FORMAT [out1, ...] = distribute(nworkers, func, ('iter'/'inplace'), arg1, ...)
+%
 % -------------------------------------------------------------------------
 % CONFIGURATION
 % -------------
@@ -44,8 +49,11 @@ function varargout = distribute(opt, func, varargin)
 % EXAMPLE 1)
 % ----------
 %
-% Let 'a' and 'b' be lists (cell array) of numeric arrays. We want to
-% compute all sums a{i} + b{i}. We would call:
+% Let 'a' and 'b' be lists (cell array) of numeric arrays:
+% >> a = num2cell(rand(5,5,10),[1 2]);
+% >> b = num2cell(rand(5,5,10),[1 2]);
+%
+% We want to compute all sums a{i} + b{i}. We would call:
 % >> [opt,c] = distribute(opt, 'plus', 'iter', a, 'iter', b);
 %
 % It will perform the equivalent of:
@@ -76,6 +84,28 @@ function varargout = distribute(opt, func, varargin)
 % >> end
 % _________________________________________________________________________
 
+    if isnumeric(varargin{1}) && isscalar(varargin{1})
+        opt = struct;
+        opt.client.workers = varargin{1};
+        opt.mode = 'parfor';
+        opt = distribute_default(opt);
+        func = varargin{2};
+        varargin  = varargin(3:end);
+        no_option = true;
+        varargout = cell(1,nargout+1);
+    elseif ~isstruct(varargin{1})
+        opt  = [];
+        func = varargin{1};
+        varargin  = varargin(2:end);
+        no_option = true;
+        varargout = cell(1,nargout+1);
+    else
+        opt  = varargin{1};
+        func = varargin{2};
+        varargin  = varargin(3:end);
+        no_option = false;
+        varargout = cell(1,nargout);
+    end
     if isempty(opt)
         opt = struct;
         opt = distribute_default(opt);
@@ -126,9 +156,9 @@ function varargout = distribute(opt, func, varargin)
     % ----------
     if strcmpi(opt.mode, 'qsub') && opt.server.setup && check_server_load(opt)
         if opt.job.batch
-            [varargout{1:nargout}] = distribute_server_batch(opt, funcstr, args, flags, access, N);
+            [varargout{1:numel(varargout)}] = distribute_server_batch(opt, funcstr, args, flags, access, N);
         else
-            [varargout{1:nargout}] = distribute_server_ind(opt, funcstr, args, flags, access, N);
+            [varargout{1:numel(varargout)}] = distribute_server_ind(opt, funcstr, args, flags, access, N);
         end
         
         opt = varargout{1};
@@ -139,12 +169,16 @@ function varargout = distribute(opt, func, varargin)
             opt = estimate_mem(opt);
         end
     elseif double(opt.client.workers) == 0 || strcmpi(opt.mode, 'for')
-        [varargout{2:nargout}] = distribute_not(opt, func, args, flags, access, N);
+        [varargout{2:numel(varargout)}] = distribute_not(opt, func, args, flags, access, N);
     else
-        [varargout{2:nargout}] = distribute_local(opt, func, args, flags, access, N);
+        [varargout{2:numel(varargout)}] = distribute_local(opt, func, args, flags, access, N);
     end
 
-    varargout{1} = opt;    
+    % Output option structure
+    % -----------------------
+    if no_option,   varargout    = varargout(2:end);
+    else,           varargout{1} = opt;    
+    end
 end
 
 function ok = check_server_load(~)

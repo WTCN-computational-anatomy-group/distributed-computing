@@ -52,19 +52,25 @@ opt = distribute_default(opt);
 
 Several additional options can be set in order to specify the cluster configuration more precisely, or to load matlab packages at runtime. Here is the complete list:
 
+### GENERAL
+```
+mode          - Parallelisation mode: 'qsub'/'parfor'/'for'                 - ['for']
+verbose       - Speak during processing                                     - [false]
+```
+
 #### CLUSTER
 ```
-server.ip     - IP adress (or alias name) of the cluster                    - ['' = no cluster]
+server.ip     - IP adress (or alias name) of the cluster                    - ['' = (server == client)]
 server.login  - Login with which to connect                                 - ['']
 server.source - Files to source on server side                              - [try to find bashrc and/or bash_profile]
-server.folder - Shared folder for writing data, scripts, etc.
+server.folder - Shared folder for writing data, scripts, etc.               - ['~/.distribute']
 ```
 
 #### LOCAL
 ```
 client.source  - Files to source on server side                             - [auto]
 client.workers - Number of local workers                                    - [auto]
-client.folder  - Shared folder for writing data, scripts, etc.
+client.folder  - Shared folder for writing data, scripts, etc.              - ['~/.distribute']
 ```
 
 #### SUBMIT JOBS
@@ -122,6 +128,18 @@ out  - Output of the function. Each one is a cell array of outputs,
        unless some arguments were 'inplace'. In this case, the
        function should return inplace arguments first, in the same
        order as their input order.
+```
+
+#### Compact versions
+
+To parallelise locally, one can also replace the option structure with the number of workers. In this case, no option structure is returned:
+```
+FORMAT [out1, ...] = distribute(nworkers, func, ('iter'/'inplace'), arg1, ...)
+```
+
+To loop without parallelisation, one can also remove entirely the option argument. In this case, no option structure is returned:
+```
+FORMAT [out1, ...] = distribute(func, ('iter'/'inplace'), arg1, ...)
 ```
 
 ### Examples
