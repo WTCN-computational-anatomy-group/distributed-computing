@@ -32,9 +32,9 @@ function varargout = distribute_local(opt, func, args, flags, access, N)
                     end
             end
         end
-        out1 = {};
-        [out1{1:Nout}] = func(args1{:});
-        out{n,:} = out1{:};
+        out1        = cell(1,Nout);
+        [out1{1,:}] = func(args1{:});        
+        out(n,:)    = out1;        
     end
 
     % Write final output
