@@ -44,12 +44,12 @@ function batch_end(total, start)
     fprintf(['%-' num2str(2*n + 20) 's\n'], s);
 end
 
-function submitted(N, batch)            
+function submitted(N, batch, jobid)            
     date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
     if batch
-        fprintf('%s | Batch job submitted to cluster (N = %i)\n', date, N);
+        fprintf('%s | Batch job submitted to cluster (N = %i, id = %s)\n', date, N, jobid{1});
     else
-        fprintf('%s | Individual jobs submitted to cluster (N = %i)\n', date, N);
+        fprintf('%s | Individual jobs submitted to cluster (N = %i, id = %s - %s)\n', date, N, jobid{1}, jobid{end});
     end
 end
 

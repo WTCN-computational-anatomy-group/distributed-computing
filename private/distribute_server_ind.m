@@ -56,7 +56,7 @@ function varargout = distribute_server_ind(opt, func, args, flags, access, N)
     end
     
     if opt.verbose
-        uihelper('submitted', N, opt.job.batch);
+        uihelper('submitted', N, opt.job.batch, opt.job.id);
     end
     
     % Track jobs
